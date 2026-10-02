@@ -53,7 +53,7 @@ def calculate_risk_score(violations: List[Dict[str, Any]]) -> int:
             score += 10
     return min(score, 100)
 
-def evaluate_invoice_rules(invoice: Dict[str, Any], amount_limit: float = DEFAULT_AMOUNT_LIMIT) -> List[Dict[str, Any]]:
+def evaluate_invoice_rules(invoice: Dict[str, Any], amount_limit: float = DEFAULT_AMOUNT_LIMIT, category_limits: Optional[Dict[str, float]] = None) -> List[Dict[str, Any]]:
     violations = []
     inv_id = str(invoice.get("invoice_id") or "UNKNOWN")
     
@@ -113,9 +113,10 @@ def evaluate_invoice_rules(invoice: Dict[str, Any], amount_limit: float = DEFAUL
             })
 
     # Rule 4: Category-Specific Limit Check
+    active_limits = category_limits if category_limits is not None else CATEGORY_LIMITS
     cat = str(invoice.get("category") or "").strip().lower()
-    if cat in CATEGORY_LIMITS and val_amount is not None and val_amount > 0:
-        cat_limit = CATEGORY_LIMITS[cat]
+    if cat in active_limits and val_amount is not None and val_amount > 0:
+        cat_limit = active_limits[cat]
         if val_amount > cat_limit:
             violations.append({
                 "invoice_id": inv_id,

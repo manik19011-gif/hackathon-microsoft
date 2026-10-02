@@ -47,6 +47,49 @@ class DecisionPayload(BaseModel):
     notes: Optional[str] = None
     user_name: Optional[str] = "Compliance Officer"
 
+class SingleInvoicePayload(BaseModel):
+    invoice_id: str
+    vendor_name: str
+    amount: float
+    invoice_date: str
+    category: Optional[str] = "General"
+    employee_id: Optional[str] = "EMP-001"
+    description: Optional[str] = ""
+    save_to_db: Optional[bool] = False
+
+class BatchDecisionPayload(BaseModel):
+    invoice_ids: List[str]
+    action: str  # "APPROVE", "REJECT", "ESCALATE"
+    notes: Optional[str] = None
+    user_name: Optional[str] = "Compliance Officer"
+
+class PolicyConfigPayload(BaseModel):
+    amount_limit: float = 5000.0
+    similarity_threshold: float = 85.0
+    split_window_days: int = 7
+    category_limits: Dict[str, float] = {
+        "meals & entertainment": 250.0,
+        "meals": 250.0,
+        "office supplies": 1000.0,
+        "travel & lodging": 3000.0,
+        "travel": 3000.0,
+        "consulting": 8000.0
+    }
+
+ACTIVE_POLICY = {
+    "amount_limit": 5000.0,
+    "similarity_threshold": 85.0,
+    "split_window_days": 7,
+    "category_limits": {
+        "meals & entertainment": 250.0,
+        "meals": 250.0,
+        "office supplies": 1000.0,
+        "travel & lodging": 3000.0,
+        "travel": 3000.0,
+        "consulting": 8000.0
+    }
+}
+
 @app.on_event("startup")
 def startup_event():
     init_db()
@@ -495,23 +538,201 @@ def get_dashboard_stats():
         "avg_risk_score": avg_risk
     }
 
-@app.post("/run-audit")
-def trigger_re_audit(amount_limit: float = Query(5000.0)):
+@app.post("/check-single-invoice")
+def check_single_invoice(payload: SingleInvoicePayload):
+    """
+    Real-time pre-payment validation for a single invoice against compliance rules,
+    RapidFuzz fuzzy duplicates, and split-transaction patterns in the active database.
+    """
+    inv_dict = payload.model_dump()
+    inv_id = payload.invoice_id
+    
+    # 1. Rule Engine Check
+    violations = evaluate_invoice_rules(
+        inv_dict,
+        amount_limit=ACTIVE_POLICY["amount_limit"],
+        category_limits=ACTIVE_POLICY["category_limits"]
+    )
+    
+    # 2. Check against existing invoices in database for Duplicates & Splits
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM invoices")
+    existing_invoices = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    
+    combined = existing_invoices + [inv_dict]
+    
+    # Duplicate check
+    dup_violations = detect_duplicates(combined, similarity_threshold=ACTIVE_POLICY["similarity_threshold"])
+    for dv in dup_violations:
+        if dv["invoice_id"] == inv_id:
+            violations.append(dv)
+            
+    # Split check
+    split_violations = detect_split_transactions(combined, amount_limit=ACTIVE_POLICY["amount_limit"], max_day_window=ACTIVE_POLICY["split_window_days"])
+    for sv in split_violations:
+        if sv["invoice_id"] == inv_id:
+            violations.append(sv)
+
+    risk_score = calculate_risk_score(violations)
+    
+    status = "PASS"
+    if any(v["status"] == "FAIL" for v in violations):
+        status = "FAIL"
+    elif any(v["status"] == "REVIEW" for v in violations):
+        status = "REVIEW"
+
+    # Attach AI explanations
+    for v in violations:
+        v["ai_explanation"] = generate_ai_explanation(v, inv_dict)
+
+    # Optional: Save to database if requested
+    if payload.save_to_db:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT OR REPLACE INTO invoices 
+            (invoice_id, vendor_name, invoice_date, amount, category, employee_id, description, status, risk_score, source, raw_data)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            inv_id,
+            payload.vendor_name,
+            payload.invoice_date,
+            payload.amount,
+            payload.category,
+            payload.employee_id,
+            payload.description,
+            status,
+            risk_score,
+            "Single Invoice Pre-Check",
+            json.dumps(inv_dict)
+        ))
+        for v in violations:
+            cursor.execute("""
+                INSERT INTO exceptions (invoice_id, rule, status, reason, evidence, severity)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (inv_id, v["rule"], v["status"], v["reason"], v["evidence"], v.get("severity", "MEDIUM")))
+        conn.commit()
+        conn.close()
+        log_audit("Single Invoice Ingested", f"Invoice {inv_id} for '{payload.vendor_name}' saved via Pre-Payment Checker (Status: {status}, Risk: {risk_score}).")
+
+    return {
+        "invoice_id": inv_id,
+        "vendor_name": payload.vendor_name,
+        "amount": payload.amount,
+        "status": status,
+        "risk_score": risk_score,
+        "violations_count": len(violations),
+        "violations": violations,
+        "saved_to_db": payload.save_to_db,
+        "recommendation": "APPROVED FOR PAYMENT" if status == "PASS" else "HOLD FOR COMPLIANCE REVIEW" if status == "REVIEW" else "REJECTED - POLICY VIOLATION"
+    }
+
+@app.post("/invoices/batch-decision")
+def batch_decision(payload: BatchDecisionPayload):
+    """
+    Applies an audit decision (APPROVE, REJECT, ESCALATE) to multiple selected invoices in one operation.
+    """
+    if not payload.invoice_ids:
+        raise HTTPException(status_code=400, detail="No invoice IDs provided")
+        
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    new_status = "PASS" if payload.action == "APPROVE" else "FAIL" if payload.action == "REJECT" else "REVIEW"
+    
+    for inv_id in payload.invoice_ids:
+        cursor.execute("""
+            UPDATE invoices 
+            SET decision_status = ?, decision_notes = ?, status = ?
+            WHERE invoice_id = ?
+        """, (payload.action, payload.notes or f"Batch {payload.action}", new_status, inv_id))
+        
+    conn.commit()
+    conn.close()
+    
+    log_audit(f"Batch Decision ({payload.action})", f"Updated {len(payload.invoice_ids)} invoices to '{payload.action}'.", user_name=payload.user_name or "Compliance Officer")
+    
+    return {
+        "status": "success",
+        "action": payload.action,
+        "updated_count": len(payload.invoice_ids)
+    }
+
+@app.get("/policy-config")
+def get_policy_config():
+    """
+    Retrieves current active compliance policy parameters.
+    """
+    return ACTIVE_POLICY
+
+@app.post("/policy-config")
+def update_policy_config(payload: PolicyConfigPayload):
+    """
+    Updates active compliance policy parameters and dynamically re-audits all records.
+    """
+    global ACTIVE_POLICY
+    ACTIVE_POLICY["amount_limit"] = payload.amount_limit
+    ACTIVE_POLICY["similarity_threshold"] = payload.similarity_threshold
+    ACTIVE_POLICY["split_window_days"] = payload.split_window_days
+    ACTIVE_POLICY["category_limits"] = payload.category_limits
+    
+    # Automatically re-audit active records with new policy
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM invoices")
     rows = [dict(r) for r in cursor.fetchall()]
-    
     cursor.execute("DELETE FROM exceptions")
     conn.commit()
     conn.close()
     
     if rows:
-        process_and_store_invoices(rows, amount_limit=amount_limit)
+        process_and_store_invoices(rows, amount_limit=payload.amount_limit)
         
+    log_audit("Policy Updated", f"Global limit: ${payload.amount_limit}, Similarity: {payload.similarity_threshold}%, Split window: {payload.split_window_days} days.")
+    
     return {
         "status": "success",
-        "message": f"Re-audited {len(rows)} records using amount limit threshold of ${amount_limit:,.2f}"
+        "message": "Policy configuration updated and all active records re-audited.",
+        "active_policy": ACTIVE_POLICY
+    }
+
+@app.post("/seed-scenario/{scenario_id}")
+def seed_scenario(scenario_id: str):
+    """
+    Seeds preloaded real-world compliance scenarios for testing.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM invoices")
+    cursor.execute("DELETE FROM exceptions")
+    conn.commit()
+    conn.close()
+    
+    if scenario_id == "procurement-fraud":
+        records = [
+            {"invoice_id": "PR-901", "vendor_name": "Apex Global Procurement", "invoice_date": "2026-10-01", "amount": 4900.0, "category": "Consulting", "employee_id": "EMP-99", "description": "Vendor advisory split 1", "source": "Procurement Fraud Scenario"},
+            {"invoice_id": "PR-902", "vendor_name": "Apex Global Procurement", "invoice_date": "2026-10-02", "amount": 4950.0, "category": "Consulting", "employee_id": "EMP-99", "description": "Vendor advisory split 2", "source": "Procurement Fraud Scenario"},
+            {"invoice_id": "PR-903", "vendor_name": "Apex Global Procurement Ltd", "invoice_date": "2026-10-03", "amount": 4950.0, "category": "Consulting", "employee_id": "EMP-99", "description": "Vendor advisory split 3", "source": "Procurement Fraud Scenario"},
+            {"invoice_id": "PR-904", "vendor_name": "Executive Flight Charters", "invoice_date": "2026-10-04", "amount": 16500.0, "category": "Travel & Lodging", "employee_id": "EMP-01", "description": "Charter jet reservation", "source": "Procurement Fraud Scenario"}
+        ]
+    elif scenario_id == "clean-operations":
+        records = [
+            {"invoice_id": "CLN-101", "vendor_name": "Microsoft Azure Cloud", "invoice_date": "2026-10-01", "amount": 1450.0, "category": "Cloud Infrastructure", "employee_id": "EMP-20", "description": "Monthly hosting", "source": "Clean Operations Scenario"},
+            {"invoice_id": "CLN-102", "vendor_name": "Staples Office Solutions", "invoice_date": "2026-10-02", "amount": 320.0, "category": "Office Supplies", "employee_id": "EMP-21", "description": "Office paper & stationery", "source": "Clean Operations Scenario"},
+            {"invoice_id": "CLN-103", "vendor_name": "Delta Airlines Corporate", "invoice_date": "2026-10-03", "amount": 780.0, "category": "Travel & Lodging", "employee_id": "EMP-22", "description": "Flight booking", "source": "Clean Operations Scenario"}
+        ]
+    else: # Default scenario: enterprise-mixed
+        records = get_demo_dataset()
+        
+    process_and_store_invoices(records, amount_limit=ACTIVE_POLICY["amount_limit"])
+    log_audit("Scenario Seeded", f"Loaded scenario '{scenario_id}' with {len(records)} records.")
+    
+    return {
+        "status": "success",
+        "scenario": scenario_id,
+        "records_loaded": len(records)
     }
 
 if __name__ == "__main__":

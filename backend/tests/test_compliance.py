@@ -122,5 +122,94 @@ def test_benford_law():
     assert "conformity" in result
     assert len(result["distribution"]) == 9
 
+def test_category_limit_policy():
+    inv = {
+        "invoice_id": "INV-CAT-1",
+        "vendor_name": "Fancy Bistro",
+        "invoice_date": "2026-10-01",
+        "amount": 450.0,
+        "category": "Meals & Entertainment"
+    }
+    violations = evaluate_invoice_rules(inv, amount_limit=5000.0, category_limits={"meals & entertainment": 250.0})
+    assert any("Category Policy Threshold Check" in v["rule"] for v in violations)
+
+def test_single_invoice_check_api():
+    from fastapi.testclient import TestClient
+    from backend.main import app
+    client = TestClient(app)
+    
+    payload = {
+        "invoice_id": "TEST-PRE-001",
+        "vendor_name": "Over Limit Corp",
+        "invoice_date": "2026-10-01",
+        "amount": 8500.0,
+        "category": "Consulting",
+        "employee_id": "EMP-99",
+        "description": "Advisory services",
+        "save_to_db": False
+    }
+    res = client.post("/check-single-invoice", json=payload)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] in ["REVIEW", "FAIL"]
+    assert data["risk_score"] > 0
+    assert data["violations_count"] >= 1
+    assert "HOLD FOR COMPLIANCE REVIEW" in data["recommendation"]
+
+def test_batch_decision_api():
+    from fastapi.testclient import TestClient
+    from backend.main import app
+    client = TestClient(app)
+    
+    # First seed clean scenario
+    client.post("/seed-scenario/clean-operations")
+    
+    # Run batch approve on clean invoices
+    payload = {
+        "invoice_ids": ["CLN-101", "CLN-102"],
+        "action": "APPROVE",
+        "notes": "Fast-track approved by CFO",
+        "user_name": "Chief Compliance Officer"
+    }
+    res = client.post("/invoices/batch-decision", json=payload)
+    assert res.status_code == 200
+    assert res.json()["updated_count"] == 2
+    
+    # Verify invoice status
+    inv_res = client.get("/invoices/CLN-101")
+    assert inv_res.json()["decision_status"] == "APPROVE"
+
+def test_policy_config_api():
+    from fastapi.testclient import TestClient
+    from backend.main import app
+    client = TestClient(app)
+    
+    # Get current policy
+    res = client.get("/policy-config")
+    assert res.status_code == 200
+    assert "amount_limit" in res.json()
+    
+    # Update policy
+    update_payload = {
+        "amount_limit": 6000.0,
+        "similarity_threshold": 90.0,
+        "split_window_days": 10,
+        "category_limits": {"software": 4000.0}
+    }
+    post_res = client.post("/policy-config", json=update_payload)
+    assert post_res.status_code == 200
+    assert post_res.json()["active_policy"]["amount_limit"] == 6000.0
+
+def test_seed_scenario_api():
+    from fastapi.testclient import TestClient
+    from backend.main import app
+    client = TestClient(app)
+    
+    res = client.post("/seed-scenario/procurement-fraud")
+    assert res.status_code == 200
+    assert res.json()["scenario"] == "procurement-fraud"
+    assert res.json()["records_loaded"] == 4
+
+
 
 
