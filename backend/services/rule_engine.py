@@ -1,4 +1,4 @@
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 import datetime
 
 DEFAULT_AMOUNT_LIMIT = 5000.0
@@ -8,19 +8,32 @@ CATEGORY_LIMITS = {
     "meals": 250.0,
     "office supplies": 1000.0,
     "travel & lodging": 3000.0,
-    "travel": 3000.0
+    "travel": 3000.0,
+    "consulting": 8000.0
 }
 
-def validate_date(date_str: Any) -> Tuple[bool, Optional[datetime.date]]:
-    if not date_str or str(date_str).strip() in ["None", "nan", ""]:
+def validate_date(date_val: Any) -> Tuple[bool, Optional[datetime.date]]:
+    if date_val is None:
         return False, None
-    s = str(date_str).strip()
-    for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d", "%d-%m-%Y"):
+    if isinstance(date_val, datetime.datetime):
+        return True, date_val.date()
+    if isinstance(date_val, datetime.date):
+        return True, date_val
+
+    s = str(date_val).strip()
+    if not s or s.lower() in ["none", "nan", "nat", ""]:
+        return False, None
+
+    # Handle ISO formats like 2026-10-01T00:00:00 or with space
+    s_clean = s.split("T")[0].split(" ")[0]
+
+    for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d", "%d-%m-%Y", "%m-%d-%Y", "%Y%m%d"):
         try:
-            dt = datetime.datetime.strptime(s, fmt).date()
+            dt = datetime.datetime.strptime(s_clean, fmt).date()
             return True, dt
         except ValueError:
             continue
+
     return False, None
 
 def calculate_risk_score(violations: List[Dict[str, Any]]) -> int:
@@ -45,8 +58,13 @@ def evaluate_invoice_rules(invoice: Dict[str, Any], amount_limit: float = DEFAUL
     inv_id = str(invoice.get("invoice_id") or "UNKNOWN")
     
     # Rule 1: Required Fields Validation
-    required_fields = ["invoice_id", "vendor_name", "amount", "invoice_date"]
+    required_fields = ["vendor_name", "amount", "invoice_date"]
     missing = [field for field in required_fields if invoice.get(field) is None or str(invoice.get(field)).strip() in ["None", "nan", ""]]
+    
+    # Also check if original invoice_id was missing
+    if invoice.get("_missing_id") or not invoice.get("invoice_id") or str(invoice.get("invoice_id")).strip() in ["None", "nan", "", "UNKNOWN"]:
+        missing.insert(0, "invoice_id")
+
     if missing:
         violations.append({
             "invoice_id": inv_id,
@@ -57,7 +75,7 @@ def evaluate_invoice_rules(invoice: Dict[str, Any], amount_limit: float = DEFAUL
             "severity": "HIGH"
         })
         
-    # Rule 2: Amount > 0
+    # Rule 2: Amount Validation (Numeric & > 0)
     amount = invoice.get("amount")
     val_amount = None
     if amount is not None:
@@ -108,7 +126,7 @@ def evaluate_invoice_rules(invoice: Dict[str, Any], amount_limit: float = DEFAUL
                 "severity": "MEDIUM"
             })
 
-    # Rule 5: Date Format and Weekend Check
+    # Rule 5: Date Format, Weekend & Future Date Check
     inv_date = invoice.get("invoice_date")
     if inv_date:
         is_valid, dt_obj = validate_date(inv_date)
@@ -121,14 +139,27 @@ def evaluate_invoice_rules(invoice: Dict[str, Any], amount_limit: float = DEFAUL
                 "evidence": f"Invoice Date string: '{inv_date}'",
                 "severity": "LOW"
             })
-        elif dt_obj and dt_obj.weekday() in (5, 6): # Saturday = 5, Sunday = 6
-            violations.append({
-                "invoice_id": inv_id,
-                "rule": "Off-Hours Weekend Date Warning",
-                "status": "REVIEW",
-                "reason": f"Invoice date '{inv_date}' falls on a weekend ({dt_obj.strftime('%A')})",
-                "evidence": f"Date: {inv_date} ({dt_obj.strftime('%A')})",
-                "severity": "LOW"
-            })
+        elif dt_obj:
+            today = datetime.date.today()
+            # Future date check (more than 7 days ahead)
+            if dt_obj > today + datetime.timedelta(days=7):
+                violations.append({
+                    "invoice_id": inv_id,
+                    "rule": "Future-Dated Invoice Warning",
+                    "status": "REVIEW",
+                    "reason": f"Invoice date '{inv_date}' is set in the future relative to system time",
+                    "evidence": f"Invoice Date: {inv_date} > System Date: {today}",
+                    "severity": "LOW"
+                })
+            # Weekend check
+            elif dt_obj.weekday() in (5, 6): # Saturday = 5, Sunday = 6
+                violations.append({
+                    "invoice_id": inv_id,
+                    "rule": "Off-Hours Weekend Date Warning",
+                    "status": "REVIEW",
+                    "reason": f"Invoice date '{inv_date}' falls on a weekend ({dt_obj.strftime('%A')})",
+                    "evidence": f"Date: {inv_date} ({dt_obj.strftime('%A')})",
+                    "severity": "LOW"
+                })
         
     return violations

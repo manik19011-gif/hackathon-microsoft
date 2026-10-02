@@ -1,0 +1,11 @@
+Invoice Number,Vendor,Date,Total Amount,Category,Employee ID,Description
+INV-2001,Microsoft Azure Services,2026-10-01,1540.2,Cloud Infrastructure,EMP-101,Monthly cloud services & database hosting
+INV-2002,Dell Enterprise Solutions,2026-10-02,3200.0,Hardware,EMP-102,High-performance workstations
+INV-2003,Staples Office Supply,2026-10-03,420.5,Office Supplies,EMP-103,Ergonomic accessories & paper stock
+INV-2004,STAPLES OFFICE SUPPLIES,2026-10-03,420.5,Office Supplies,EMP-103,Ergonomic accessories & paper stock
+INV-2005,Global Data Center Corp,2026-10-04,14500.0,Capital Expenditure,EMP-104,Server rack cooling upgrade
+INV-2006,Apex Logistics Group,2026-10-05,4880.0,Shipping & Freight,EMP-105,Bulk equipment shipping batch 1
+INV-2007,Apex Logistics Group,2026-10-05,4920.0,Shipping & Freight,EMP-105,Bulk equipment shipping batch 2
+INV-2008,,2026-10-06,750.0,Consulting,EMP-106,Vendor name missing anomaly test
+INV-2009,Metro Catering & Dining,2026-10-07,650.0,Meals & Entertainment,EMP-107,Executive team conference dinner
+INV-2010,Telecom Network Refund,2026-10-08,-250.0,Utilities,EMP-108,Erroneous negative line item

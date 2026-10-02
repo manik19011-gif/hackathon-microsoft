@@ -118,10 +118,17 @@ def process_and_store_invoices(invoices: List[Dict[str, Any]], amount_limit: flo
         cursor.execute("ALTER TABLE invoices ADD COLUMN decision_notes TEXT")
     conn.commit()
 
+    # Pre-process: ensure unique surrogate ID for records lacking an invoice_id to prevent collision
+    for idx, inv in enumerate(invoices):
+        raw_id = inv.get("invoice_id")
+        if not raw_id or str(raw_id).strip().lower() in ["none", "nan", "null", "", "unknown"]:
+            inv["_missing_id"] = True
+            inv["invoice_id"] = f"GEN_ID_{idx + 1}"
+
     # 1. Rule Engine
     invoice_violations_map = {}
     for inv in invoices:
-        inv_id = str(inv.get("invoice_id") or "UNKNOWN")
+        inv_id = str(inv.get("invoice_id"))
         v_list = evaluate_invoice_rules(inv, amount_limit=amount_limit)
         invoice_violations_map[inv_id] = v_list
         
@@ -145,7 +152,7 @@ def process_and_store_invoices(invoices: List[Dict[str, Any]], amount_limit: flo
             
     # 4. Persist
     for inv in invoices:
-        inv_id = str(inv.get("invoice_id") or "UNKNOWN")
+        inv_id = str(inv.get("invoice_id"))
         violations = invoice_violations_map.get(inv_id, [])
         risk_score = calculate_risk_score(violations)
         
@@ -203,11 +210,19 @@ def seed_demo(amount_limit: float = Query(5000.0)):
 
 @app.post("/upload-dataset")
 async def upload_dataset(file: UploadFile = File(...), amount_limit: float = Query(5000.0)):
+    valid_exts = [".csv", ".xlsx", ".xls"]
+    ext = os.path.splitext(file.filename)[1].lower() if file.filename else ""
+    if ext not in valid_exts:
+        raise HTTPException(status_code=400, detail=f"Unsupported file type '{ext}'. Supported formats: {', '.join(valid_exts)}")
+
     temp_dir = os.path.join(os.path.dirname(__file__), "data", "raw")
     os.makedirs(temp_dir, exist_ok=True)
     file_path = os.path.join(temp_dir, file.filename)
     
     contents = await file.read()
+    if not contents or len(contents) == 0:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
     with open(file_path, "wb") as f:
         f.write(contents)
         
@@ -234,6 +249,7 @@ def list_invoices(
     status: Optional[str] = None,
     source: Optional[str] = None,
     search: Optional[str] = None,
+    risk_level: Optional[str] = None,
     limit: int = 100
 ):
     conn = get_connection()
@@ -248,6 +264,12 @@ def list_invoices(
     if source:
         query += " AND source = ?"
         params.append(source)
+    if risk_level == "HIGH":
+        query += " AND risk_score >= 45"
+    elif risk_level == "MEDIUM":
+        query += " AND risk_score >= 20 AND risk_score < 45"
+    elif risk_level == "LOW":
+        query += " AND risk_score < 20"
     if search:
         query += " AND (invoice_id LIKE ? OR vendor_name LIKE ? OR description LIKE ?)"
         s_term = f"%{search}%"

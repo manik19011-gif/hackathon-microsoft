@@ -103,4 +103,24 @@ def test_vendor_analytics():
     assert analysis[0]["vendor_name"] == "Vendor Alpha"
     assert analysis[0]["risk_rating"] == "HIGH"
 
+def test_clean_amount_currency():
+    from services.data_loader import clean_amount_value
+    assert clean_amount_value("$1,540.20") == 1540.20
+    assert clean_amount_value("€2,500.00") == 2500.00
+    assert clean_amount_value("   450.50  ") == 450.50
+    assert clean_amount_value("invalid_num") is None
+    assert clean_amount_value(None) is None
+
+def test_benford_law():
+    from services.benford import analyze_benford_law
+    invoices = [
+        {"amount": 120.0}, {"amount": 150.0}, {"amount": 190.0},
+        {"amount": 210.0}, {"amount": 340.0}, {"amount": 410.0}
+    ]
+    result = analyze_benford_law(invoices)
+    assert result["total_analyzed"] == 6
+    assert "conformity" in result
+    assert len(result["distribution"]) == 9
+
+
 
