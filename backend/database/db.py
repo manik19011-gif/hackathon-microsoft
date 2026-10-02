@@ -27,6 +27,8 @@ def init_db():
         description TEXT,
         status TEXT DEFAULT 'PASS',
         risk_score INTEGER DEFAULT 0,
+        decision_status TEXT DEFAULT 'PENDING',
+        decision_notes TEXT,
         source TEXT DEFAULT 'Kaggle-derived Demo Case',
         raw_data TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

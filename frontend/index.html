@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Invoice & Expense Checker Assistant — Microsoft Hackathon</title>
+  <title>Invoice & Expense Checker Assistant — Enterprise AI</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -17,8 +17,14 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen">
 
+  <!-- Toast Notification Container -->
+  <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 border border-slate-700 text-white text-xs font-semibold px-4 py-3 rounded-lg shadow-xl hidden z-50 flex items-center space-x-2">
+    <i data-lucide="info" class="w-4 h-4 text-indigo-400"></i>
+    <span id="toastMsg">Notification message</span>
+  </div>
+
   <!-- Navigation Bar -->
-  <header class="bg-slate-800/80 backdrop-blur border-b border-slate-700 sticky top-0 z-50">
+  <header class="bg-slate-800/80 backdrop-blur border-b border-slate-700 sticky top-0 z-40">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center space-x-3">
         <div class="p-2 bg-indigo-600 rounded-lg text-white">
@@ -158,6 +164,24 @@
       </div>
     </div>
 
+    <!-- Search & Filter Bar -->
+    <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center space-x-2 flex-1 min-w-[240px]">
+        <i data-lucide="search" class="w-4 h-4 text-slate-400"></i>
+        <input type="text" id="searchInput" oninput="loadData()" placeholder="Search by Invoice ID, Vendor, or Description..." class="w-full bg-slate-900 border border-slate-700 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500">
+      </div>
+
+      <div class="flex items-center space-x-3 text-xs">
+        <label class="text-slate-400 font-medium">Status Filter:</label>
+        <select id="statusFilter" onchange="loadData()" class="bg-slate-900 border border-slate-700 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500">
+          <option value="">All Statuses</option>
+          <option value="PASS">PASS (Clean)</option>
+          <option value="REVIEW">REVIEW Required</option>
+          <option value="FAIL">FAIL (Violations)</option>
+        </select>
+      </div>
+    </div>
+
     <!-- Tabs Container -->
     <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-lg">
       <div class="border-b border-slate-700 bg-slate-800/90 px-6 py-3 flex items-center justify-between">
@@ -168,8 +192,11 @@
           <button onclick="switchTab('invoicesTab')" id="btnTabInvoices" class="text-sm font-semibold text-slate-400 hover:text-slate-200 pb-2 transition">
             All Invoices & Risk Scores
           </button>
+          <button onclick="switchTab('vendorTab')" id="btnTabVendor" class="text-sm font-semibold text-slate-400 hover:text-slate-200 pb-2 transition">
+            Vendor Risk Intelligence
+          </button>
           <button onclick="switchTab('benfordTab')" id="btnTabBenford" class="text-sm font-semibold text-slate-400 hover:text-slate-200 pb-2 transition">
-            Benford's Law Fraud Analysis
+            Benford's Law Analysis
           </button>
           <button onclick="switchTab('profilerTab')" id="btnTabProfiler" class="text-sm font-semibold text-slate-400 hover:text-slate-200 pb-2 transition">
             Dataset Profile
@@ -192,7 +219,7 @@
             <i data-lucide="alert-octagon" class="w-5 h-5 text-amber-400"></i>
             <span>Rule Engine Violations & AI Audit Findings</span>
           </h2>
-          <span class="text-xs text-slate-400">Powered by Rule Engine & Azure OpenAI Explanation Generator</span>
+          <span class="text-xs text-slate-400">Click any row to open Auditor Investigation Modal</span>
         </div>
 
         <div class="overflow-x-auto rounded-lg border border-slate-700">
@@ -205,11 +232,12 @@
                 <th class="py-3 px-4">Status</th>
                 <th class="py-3 px-4">Evidence & Finding</th>
                 <th class="py-3 px-4">AI Audit Explanation</th>
+                <th class="py-3 px-4">Action</th>
               </tr>
             </thead>
             <tbody id="exceptionsTableBody" class="divide-y divide-slate-700/60 bg-slate-800/40">
               <tr>
-                <td colspan="6" class="py-8 text-center text-slate-500">Loading audit findings...</td>
+                <td colspan="7" class="py-8 text-center text-slate-500">Loading audit findings...</td>
               </tr>
             </tbody>
           </table>
@@ -236,19 +264,53 @@
                 <th class="py-3 px-4">Category</th>
                 <th class="py-3 px-4">Risk Score</th>
                 <th class="py-3 px-4">Status</th>
-                <th class="py-3 px-4">Source</th>
+                <th class="py-3 px-4">Decision</th>
+                <th class="py-3 px-4">Action</th>
               </tr>
             </thead>
             <tbody id="invoicesTableBody" class="divide-y divide-slate-700/60 bg-slate-800/40">
               <tr>
-                <td colspan="8" class="py-8 text-center text-slate-500">Loading invoices...</td>
+                <td colspan="9" class="py-8 text-center text-slate-500">Loading invoices...</td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
 
-      <!-- Tab 3: Benford's Law Fraud Screening -->
+      <!-- Tab 3: Vendor Risk Intelligence -->
+      <div id="vendorTab" class="p-6 space-y-6 hidden">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-md font-semibold text-white flex items-center space-x-2">
+              <i data-lucide="building" class="w-5 h-5 text-indigo-400"></i>
+              <span>Vendor Risk & Procurement Intelligence</span>
+            </h2>
+            <p class="text-xs text-slate-400 mt-1">Aggregated risk profile, violation frequency, and expenditure per vendor</p>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto rounded-lg border border-slate-700">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-slate-900/80 text-slate-400 font-semibold uppercase tracking-wider text-[11px] border-b border-slate-700">
+              <tr>
+                <th class="py-3 px-4">Vendor Name</th>
+                <th class="py-3 px-4">Invoices Submitted</th>
+                <th class="py-3 px-4">Total Spend ($)</th>
+                <th class="py-3 px-4">Total Violations</th>
+                <th class="py-3 px-4">Max Risk Score</th>
+                <th class="py-3 px-4">Risk Rating</th>
+              </tr>
+            </thead>
+            <tbody id="vendorTableBody" class="divide-y divide-slate-700/60 bg-slate-800/40">
+              <tr>
+                <td colspan="6" class="py-8 text-center text-slate-500">Loading vendor analytics...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab 4: Benford's Law Fraud Screening -->
       <div id="benfordTab" class="p-6 space-y-6 hidden">
         <div class="flex items-center justify-between">
           <div>
@@ -266,7 +328,7 @@
         </div>
       </div>
 
-      <!-- Tab 4: Dataset Profiler -->
+      <!-- Tab 5: Dataset Profiler -->
       <div id="profilerTab" class="p-6 space-y-6 hidden">
         <div class="flex items-center justify-between">
           <h2 class="text-md font-semibold text-white flex items-center space-x-2">
@@ -295,7 +357,7 @@
         </div>
       </div>
 
-      <!-- Tab 5: Audit Trail -->
+      <!-- Tab 6: Audit Trail -->
       <div id="auditTab" class="p-6 space-y-4 hidden">
         <div class="flex items-center justify-between">
           <h2 class="text-md font-semibold text-white flex items-center space-x-2">
@@ -327,11 +389,73 @@
 
   </main>
 
+  <!-- Auditor Investigation Modal -->
+  <div id="auditModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-xl max-w-2xl w-full p-6 space-y-6 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-700 pb-4">
+        <div>
+          <h3 class="text-md font-bold text-white flex items-center space-x-2">
+            <i data-lucide="file-search" class="w-5 h-5 text-indigo-400"></i>
+            <span>Auditor Investigation & Decision</span>
+          </h3>
+          <p class="text-xs text-slate-400" id="modalInvId">Invoice ID: --</p>
+        </div>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4 text-xs bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+        <div><span class="text-slate-400">Vendor:</span> <span id="modalVendor" class="font-semibold text-slate-200">--</span></div>
+        <div><span class="text-slate-400">Amount:</span> <span id="modalAmount" class="font-semibold text-emerald-400">--</span></div>
+        <div><span class="text-slate-400">Date:</span> <span id="modalDate" class="text-slate-300">--</span></div>
+        <div><span class="text-slate-400">Category:</span> <span id="modalCategory" class="text-slate-300">--</span></div>
+        <div><span class="text-slate-400">Employee ID:</span> <span id="modalEmp" class="text-slate-300">--</span></div>
+        <div><span class="text-slate-400">Risk Score:</span> <span id="modalRisk" class="font-bold text-purple-400">--</span></div>
+      </div>
+
+      <div class="space-y-2">
+        <h4 class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Rule Violations & AI Finding</h4>
+        <div id="modalExceptions" class="space-y-2 max-h-40 overflow-y-auto">
+          <p class="text-slate-500 text-xs">No violations.</p>
+        </div>
+      </div>
+
+      <div class="space-y-3 border-t border-slate-700 pt-4">
+        <label class="text-xs font-semibold text-slate-300 uppercase tracking-wider block">Audit Decision Notes:</label>
+        <textarea id="modalNotes" rows="2" class="w-full bg-slate-900 border border-slate-700 text-xs text-white rounded-lg p-2.5 focus:outline-none focus:border-indigo-500" placeholder="Enter auditor justification notes..."></textarea>
+
+        <div class="flex items-center justify-end space-x-3 pt-2">
+          <button onclick="submitDecision('APPROVE')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-lg transition flex items-center space-x-1">
+            <i data-lucide="check" class="w-4 h-4"></i>
+            <span>Approve Invoice</span>
+          </button>
+          <button onclick="submitDecision('ESCALATE')" class="bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold px-4 py-2 rounded-lg transition flex items-center space-x-1">
+            <i data-lucide="alert-circle" class="w-4 h-4"></i>
+            <span>Escalate</span>
+          </button>
+          <button onclick="submitDecision('REJECT')" class="bg-red-600 hover:bg-red-500 text-white text-xs font-semibold px-4 py-2 rounded-lg transition flex items-center space-x-1">
+            <i data-lucide="x-circle" class="w-4 h-4"></i>
+            <span>Reject / Mark Fraud</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     const API_BASE = 'http://localhost:8000';
     let chartStatusObj = null;
     let chartCategoryObj = null;
     let chartBenfordObj = null;
+    let activeModalInvId = null;
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastMsg').innerText = msg;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 3500);
+    }
 
     async function fetchAPI(endpoint, options = {}) {
       try {
@@ -345,6 +469,9 @@
     }
 
     async function loadData() {
+      const search = document.getElementById('searchInput').value || '';
+      const statusF = document.getElementById('statusFilter').value || '';
+
       // 1. Dashboard Stats
       const stats = await fetchAPI('/dashboard-stats');
       if (stats) {
@@ -363,10 +490,10 @@
       if (excRes && excRes.exceptions) {
         const tbody = document.getElementById('exceptionsTableBody');
         if (excRes.exceptions.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-500">No compliance violations detected. All invoices pass policy rules!</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-500">No compliance violations detected. All invoices pass policy rules!</td></tr>`;
         } else {
           tbody.innerHTML = excRes.exceptions.map(e => `
-            <tr class="hover:bg-slate-700/30 transition">
+            <tr class="hover:bg-slate-700/40 transition cursor-pointer" onclick="openModal('${e.invoice_id}')">
               <td class="py-3 px-4 font-mono font-medium text-slate-200">${e.invoice_id}</td>
               <td class="py-3 px-4 font-semibold text-slate-300">${e.rule}</td>
               <td class="py-3 px-4">
@@ -381,13 +508,20 @@
               </td>
               <td class="py-3 px-4 text-slate-400 max-w-xs truncate">${e.reason}</td>
               <td class="py-3 px-4 text-indigo-300 bg-indigo-500/5 rounded p-2 border border-indigo-500/10 text-[11px] leading-relaxed">${e.ai_explanation}</td>
+              <td class="py-3 px-4">
+                <button onclick="event.stopPropagation(); openModal('${e.invoice_id}')" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold underline">Investigate</button>
+              </td>
             </tr>
           `).join('');
         }
       }
 
       // 3. Invoices
-      const invRes = await fetchAPI('/invoices');
+      let invUrl = `/invoices?limit=100`;
+      if (statusF) invUrl += `&status=${statusF}`;
+      if (search) invUrl += `&search=${encodeURIComponent(search)}`;
+      
+      const invRes = await fetchAPI(invUrl);
       if (invRes && invRes.invoices) {
         const tbody = document.getElementById('invoicesTableBody');
         const catMap = {};
@@ -397,7 +531,7 @@
           catMap[catName] = (catMap[catName] || 0) + (i.amount > 0 ? i.amount : 0);
           
           return `
-            <tr class="hover:bg-slate-700/30 transition">
+            <tr class="hover:bg-slate-700/40 transition cursor-pointer" onclick="openModal('${i.invoice_id}')">
               <td class="py-3 px-4 font-mono font-medium text-slate-200">${i.invoice_id}</td>
               <td class="py-3 px-4 text-slate-300">${i.vendor_name || '<span class="text-red-400 italic">Missing</span>'}</td>
               <td class="py-3 px-4 font-semibold ${i.amount < 0 ? 'text-red-400' : 'text-emerald-400'}">${i.amount != null ? '$' + Number(i.amount).toLocaleString() : '--'}</td>
@@ -409,7 +543,10 @@
                   ${i.status}
                 </span>
               </td>
-              <td class="py-3 px-4 text-slate-400 text-[10px]">${i.source}</td>
+              <td class="py-3 px-4 text-xs font-semibold text-slate-400">${i.decision_status || 'PENDING'}</td>
+              <td class="py-3 px-4">
+                <button onclick="event.stopPropagation(); openModal('${i.invoice_id}')" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold underline">Details</button>
+              </td>
             </tr>
           `;
         }).join('');
@@ -417,14 +554,34 @@
         renderCategoryChart(catMap);
       }
 
-      // 4. Benford's Law
+      // 4. Vendor Intelligence
+      const vendorRes = await fetchAPI('/vendor-analytics');
+      if (vendorRes && vendorRes.vendors) {
+        const tbody = document.getElementById('vendorTableBody');
+        tbody.innerHTML = vendorRes.vendors.map(v => `
+          <tr class="hover:bg-slate-700/30 transition">
+            <td class="py-3 px-4 font-semibold text-slate-200">${v.vendor_name}</td>
+            <td class="py-3 px-4 text-slate-300">${v.invoice_count}</td>
+            <td class="py-3 px-4 text-indigo-400 font-semibold">$${v.total_spend.toLocaleString()}</td>
+            <td class="py-3 px-4 text-slate-300">${v.total_violations}</td>
+            <td class="py-3 px-4 font-mono font-bold ${v.max_risk_score > 40 ? 'text-red-400' : 'text-amber-400'}">${v.max_risk_score}</td>
+            <td class="py-3 px-4">
+              <span class="px-2 py-0.5 text-[10px] font-bold rounded ${v.risk_rating === 'HIGH' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : v.risk_rating === 'MEDIUM' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}">
+                ${v.risk_rating}
+              </span>
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      // 5. Benford's Law
       const benfordRes = await fetchAPI('/benford-analysis');
       if (benfordRes) {
         document.getElementById('benfordConformity').innerText = `Conformity: ${benfordRes.conformity} (MAD: ${benfordRes.mad_score})`;
         renderBenfordChart(benfordRes.distribution);
       }
 
-      // 5. Data Profile
+      // 6. Data Profile
       const prof = await fetchAPI('/data-profile');
       if (prof && prof.stats) {
         document.getElementById('profMin').innerText = `$${prof.stats.min_amount.toLocaleString()}`;
@@ -441,7 +598,7 @@
         `).join('');
       }
 
-      // 6. Audit Trail Logs
+      // 7. Audit Trail Logs
       const auditRes = await fetchAPI('/audit-trail');
       if (auditRes && auditRes.audit_trail) {
         const tbody = document.getElementById('auditTableBody');
@@ -456,6 +613,60 @@
       }
 
       lucide.createIcons();
+    }
+
+    async function openModal(invId) {
+      activeModalInvId = invId;
+      const inv = await fetchAPI(`/invoices/${invId}`);
+      if (!inv) return;
+
+      document.getElementById('modalInvId').innerText = `Invoice ID: ${inv.invoice_id}`;
+      document.getElementById('modalVendor').innerText = inv.vendor_name || 'Missing';
+      document.getElementById('modalAmount').innerText = inv.amount != null ? `$${Number(inv.amount).toLocaleString()}` : '--';
+      document.getElementById('modalDate').innerText = inv.invoice_date || '--';
+      document.getElementById('modalCategory').innerText = inv.category || '--';
+      document.getElementById('modalEmp').innerText = inv.employee_id || '--';
+      document.getElementById('modalRisk').innerText = `${inv.risk_score || 0} / 100`;
+      document.getElementById('modalNotes').value = inv.decision_notes || '';
+
+      const excDiv = document.getElementById('modalExceptions');
+      if (!inv.exceptions || inv.exceptions.length === 0) {
+        excDiv.innerHTML = `<p class="text-emerald-400 text-xs font-semibold">No rule violations. Clean compliance record!</p>`;
+      } else {
+        excDiv.innerHTML = inv.exceptions.map(e => `
+          <div class="bg-slate-900 p-3 rounded border border-slate-700 text-xs space-y-1">
+            <div class="flex justify-between items-center font-semibold text-slate-200">
+              <span>${e.rule}</span>
+              <span class="text-[10px] font-bold ${e.severity === 'HIGH' ? 'text-red-400' : 'text-amber-400'}">${e.severity}</span>
+            </div>
+            <p class="text-slate-400">${e.reason}</p>
+            <p class="text-indigo-300 text-[11px] bg-indigo-500/10 p-1.5 rounded mt-1">${e.ai_explanation}</p>
+          </div>
+        `).join('');
+      }
+
+      document.getElementById('auditModal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('auditModal').classList.add('hidden');
+    }
+
+    async function submitDecision(action) {
+      if (!activeModalInvId) return;
+      const notes = document.getElementById('modalNotes').value;
+
+      const res = await fetchAPI(`/invoices/${activeModalInvId}/decision`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: action, notes: notes })
+      });
+
+      if (res && res.status === 'success') {
+        showToast(`Invoice ${activeModalInvId} marked as ${action}!`);
+        closeModal();
+        await loadData();
+      }
     }
 
     function renderCharts(pass, review, fail) {
@@ -592,18 +803,19 @@
     }
 
     function switchTab(tabId) {
-      ['exceptionsTab', 'invoicesTab', 'benfordTab', 'profilerTab', 'auditTab'].forEach(t => {
+      ['exceptionsTab', 'invoicesTab', 'vendorTab', 'benfordTab', 'profilerTab', 'auditTab'].forEach(t => {
         document.getElementById(t).classList.add('hidden');
       });
       document.getElementById(tabId).classList.remove('hidden');
 
-      ['btnTabExceptions', 'btnTabInvoices', 'btnTabBenford', 'btnTabProfiler', 'btnTabAudit'].forEach(b => {
+      ['btnTabExceptions', 'btnTabInvoices', 'btnTabVendor', 'btnTabBenford', 'btnTabProfiler', 'btnTabAudit'].forEach(b => {
         document.getElementById(b).className = 'text-sm font-semibold text-slate-400 hover:text-slate-200 pb-2 transition';
       });
       
       const activeMap = {
         'exceptionsTab': 'btnTabExceptions',
         'invoicesTab': 'btnTabInvoices',
+        'vendorTab': 'btnTabVendor',
         'benfordTab': 'btnTabBenford',
         'profilerTab': 'btnTabProfiler',
         'auditTab': 'btnTabAudit'

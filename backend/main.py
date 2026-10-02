@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Query, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
+from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import os
 import sqlite3
@@ -16,6 +17,7 @@ from services.rule_engine import evaluate_invoice_rules, calculate_risk_score
 from services.duplicate_detector import detect_duplicates
 from services.split_detector import detect_split_transactions
 from services.benford import analyze_benford_law
+from services.vendor_analytics import analyze_vendor_risk
 from services.profiler import generate_data_profile
 from services.ai_explainer import generate_ai_explanation
 from services.demo_generator import get_demo_dataset
@@ -23,8 +25,8 @@ from services.data_loader import load_and_process_dataset
 
 app = FastAPI(
     title="Invoice & Expense Checker Assistant API",
-    description="Automated compliance, duplicate detection, split transaction analysis, Benford's Law screening, and AI audit for enterprise expense invoices.",
-    version="1.2.0"
+    description="Automated compliance, duplicate detection, split transaction analysis, Benford's Law screening, vendor risk analytics, and AI audit for enterprise expense invoices.",
+    version="1.3.0"
 )
 
 app.add_middleware(
@@ -34,6 +36,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+class DecisionPayload(BaseModel):
+    action: str  # "APPROVE", "REJECT", "ESCALATE", "MARK_DUPLICATE"
+    notes: Optional[str] = None
+    user_name: Optional[str] = "Compliance Officer"
 
 @app.on_event("startup")
 def startup_event():
@@ -53,9 +60,6 @@ def health_check():
     return {"status": "healthy"}
 
 def process_and_store_invoices(invoices: List[Dict[str, Any]], amount_limit: float = 5000.0):
-    """
-    Runs rule engine, duplicate detector, and split transaction detector. Persists records + exceptions into SQLite.
-    """
     conn = get_connection()
     cursor = conn.cursor()
     
@@ -63,16 +67,20 @@ def process_and_store_invoices(invoices: List[Dict[str, Any]], amount_limit: flo
     cols = [r["name"] for r in cursor.fetchall()]
     if "risk_score" not in cols:
         cursor.execute("ALTER TABLE invoices ADD COLUMN risk_score INTEGER DEFAULT 0")
-        conn.commit()
+    if "decision_status" not in cols:
+        cursor.execute("ALTER TABLE invoices ADD COLUMN decision_status TEXT DEFAULT 'PENDING'")
+    if "decision_notes" not in cols:
+        cursor.execute("ALTER TABLE invoices ADD COLUMN decision_notes TEXT")
+    conn.commit()
 
-    # 1. Evaluate Rule Engine for each record
+    # 1. Rule Engine
     invoice_violations_map = {}
     for inv in invoices:
         inv_id = str(inv.get("invoice_id") or "UNKNOWN")
         v_list = evaluate_invoice_rules(inv, amount_limit=amount_limit)
         invoice_violations_map[inv_id] = v_list
         
-    # 2. Evaluate Duplicate Detection across dataset
+    # 2. Duplicate Detection
     duplicate_violations = detect_duplicates(invoices)
     for dup_v in duplicate_violations:
         inv_id = dup_v["invoice_id"]
@@ -81,7 +89,7 @@ def process_and_store_invoices(invoices: List[Dict[str, Any]], amount_limit: flo
         else:
             invoice_violations_map[inv_id] = [dup_v]
 
-    # 3. Evaluate Split Transaction Detection across dataset
+    # 3. Split Transaction Detection
     split_violations = detect_split_transactions(invoices, amount_limit=amount_limit)
     for split_v in split_violations:
         inv_id = split_v["invoice_id"]
@@ -90,7 +98,7 @@ def process_and_store_invoices(invoices: List[Dict[str, Any]], amount_limit: flo
         else:
             invoice_violations_map[inv_id] = [split_v]
             
-    # 4. Persist to Database
+    # 4. Persist
     for inv in invoices:
         inv_id = str(inv.get("invoice_id") or "UNKNOWN")
         violations = invoice_violations_map.get(inv_id, [])
@@ -131,7 +139,7 @@ def process_and_store_invoices(invoices: List[Dict[str, Any]], amount_limit: flo
     log_audit("Dataset Processed", f"Ingested {len(invoices)} records. Amount limit policy: ${amount_limit}")
 
 @app.post("/seed-demo")
-def seed_demo(amount_limit: float = Query(5000.0, description="Configurable amount limit threshold")):
+def seed_demo(amount_limit: float = Query(5000.0)):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("DELETE FROM invoices")
@@ -180,6 +188,7 @@ async def upload_dataset(file: UploadFile = File(...), amount_limit: float = Que
 def list_invoices(
     status: Optional[str] = None,
     source: Optional[str] = None,
+    search: Optional[str] = None,
     limit: int = 100
 ):
     conn = get_connection()
@@ -194,6 +203,10 @@ def list_invoices(
     if source:
         query += " AND source = ?"
         params.append(source)
+    if search:
+        query += " AND (invoice_id LIKE ? OR vendor_name LIKE ? OR description LIKE ?)"
+        s_term = f"%{search}%"
+        params.extend([s_term, s_term, s_term])
         
     query += " ORDER BY risk_score DESC, id DESC LIMIT ?"
     params.append(limit)
@@ -227,13 +240,51 @@ def get_invoice_detail(invoice_id: str):
     invoice_dict["exceptions"] = exceptions
     return invoice_dict
 
+@app.post("/invoices/{invoice_id}/decision")
+def record_audit_decision(invoice_id: str, payload: DecisionPayload):
+    """
+    Records human auditor decision (APPROVE, REJECT, ESCALATE, MARK_DUPLICATE) on flagged invoice.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT * FROM invoices WHERE invoice_id = ?", (invoice_id,))
+    inv = cursor.fetchone()
+    if not inv:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Invoice not found")
+        
+    new_status = inv["status"]
+    if payload.action == "APPROVE":
+        new_status = "PASS"
+    elif payload.action == "REJECT":
+        new_status = "FAIL"
+        
+    cursor.execute("""
+        UPDATE invoices 
+        SET decision_status = ?, decision_notes = ?, status = ?
+        WHERE invoice_id = ?
+    """, (payload.action, payload.notes, new_status, invoice_id))
+    
+    conn.commit()
+    conn.close()
+    
+    log_audit(f"Audit Decision ({payload.action})", f"Invoice {invoice_id} decision updated to '{payload.action}'. Notes: {payload.notes or 'None'}", user_name=payload.user_name or "Compliance Officer")
+    
+    return {
+        "status": "success",
+        "invoice_id": invoice_id,
+        "decision": payload.action,
+        "updated_status": new_status
+    }
+
 @app.get("/exceptions")
 def list_exceptions(severity: Optional[str] = None):
     conn = get_connection()
     cursor = conn.cursor()
     
     query = """
-        SELECT e.*, i.vendor_name, i.amount, i.invoice_date, i.source 
+        SELECT e.*, i.vendor_name, i.amount, i.invoice_date, i.source, i.decision_status 
         FROM exceptions e 
         LEFT JOIN invoices i ON e.invoice_id = i.invoice_id
         WHERE 1=1
@@ -253,11 +304,22 @@ def list_exceptions(severity: Optional[str] = None):
         
     return {"exceptions": rows, "count": len(rows)}
 
+@app.get("/vendor-analytics")
+def get_vendor_analytics():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM invoices")
+    invoices = [dict(r) for r in cursor.fetchall()]
+    
+    cursor.execute("SELECT * FROM exceptions")
+    exceptions = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    
+    analysis = analyze_vendor_risk(invoices, exceptions)
+    return {"vendors": analysis, "total_vendors": len(analysis)}
+
 @app.get("/benford-analysis")
 def get_benford_analysis():
-    """
-    Performs Benford's Law leading digit statistical screening across all invoice amounts.
-    """
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT amount FROM invoices WHERE amount IS NOT NULL")
@@ -269,9 +331,6 @@ def get_benford_analysis():
 
 @app.get("/audit-trail")
 def get_audit_trail(limit: int = 50):
-    """
-    Returns immutable audit logs for SOX / GAAP compliance verification.
-    """
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM audit_logs ORDER BY id DESC LIMIT ?", (limit,))

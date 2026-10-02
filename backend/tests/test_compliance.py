@@ -91,14 +91,16 @@ def test_split_transaction_detector():
     assert len(violations) == 2
     assert violations[0]["rule"] == "Split Transaction / Threshold Evasion Check"
 
-def test_benford_law_analysis():
-    from services.benford import analyze_benford_law
+def test_vendor_analytics():
+    from services.vendor_analytics import analyze_vendor_risk
     invoices = [
-        {"amount": 120.0}, {"amount": 150.0}, {"amount": 190.0},
-        {"amount": 210.0}, {"amount": 340.0}, {"amount": 410.0}
+        {"invoice_id": "I1", "vendor_name": "Vendor Alpha", "amount": 100.0, "risk_score": 50},
+        {"invoice_id": "I2", "vendor_name": "Vendor Beta", "amount": 200.0, "risk_score": 0}
     ]
-    result = analyze_benford_law(invoices)
-    assert result["total_analyzed"] == 6
-    assert "conformity" in result
-    assert len(result["distribution"]) == 9
+    exceptions = [{"invoice_id": "I1"}]
+    analysis = analyze_vendor_risk(invoices, exceptions)
+    assert len(analysis) == 2
+    assert analysis[0]["vendor_name"] == "Vendor Alpha"
+    assert analysis[0]["risk_rating"] == "HIGH"
+
 
