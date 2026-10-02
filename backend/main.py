@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Query, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import Response, FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import os
@@ -26,7 +27,7 @@ from services.data_loader import load_and_process_dataset
 app = FastAPI(
     title="Invoice & Expense Checker Assistant API",
     description="Automated compliance, duplicate detection, split transaction analysis, Benford's Law screening, vendor risk analytics, and AI audit for enterprise expense invoices.",
-    version="1.3.0"
+    version="1.4.0"
 )
 
 app.add_middleware(
@@ -36,6 +37,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+FRONTEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
+if os.path.exists(FRONTEND_DIR):
+    app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
 class DecisionPayload(BaseModel):
     action: str  # "APPROVE", "REJECT", "ESCALATE", "MARK_DUPLICATE"
@@ -48,12 +53,52 @@ def startup_event():
     log_audit("API Startup", "Database initialized and API endpoints ready.")
 
 @app.get("/")
-def root():
+def get_home_page():
+    index_path = os.path.join(FRONTEND_DIR, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return {"status": "online", "message": "Frontend not found"}
+
+@app.get("/landing")
+def get_landing_page():
+    landing_path = os.path.join(FRONTEND_DIR, "landing.html")
+    if os.path.exists(landing_path):
+        return FileResponse(landing_path)
+    return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+
+@app.get("/api/status")
+def api_status():
     return {
         "status": "online",
         "service": "Invoice & Expense Checker Assistant API",
         "documentation": "/docs"
     }
+
+@app.get("/sample-csv")
+def get_sample_csv():
+    """
+    Generates and returns an enterprise sample CSV file with clean records and compliance test anomalies.
+    """
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Invoice Number", "Vendor", "Date", "Total Amount", "Category", "Employee ID", "Description"])
+    writer.writerow(["INV-2001", "Microsoft Azure Services", "2026-10-01", 1540.20, "Cloud Infrastructure", "EMP-101", "Monthly cloud services & database hosting"])
+    writer.writerow(["INV-2002", "Dell Enterprise Solutions", "2026-10-02", 3200.00, "Hardware", "EMP-102", "High-performance workstations"])
+    writer.writerow(["INV-2003", "Staples Office Supply", "2026-10-03", 420.50, "Office Supplies", "EMP-103", "Ergonomic accessories & paper stock"])
+    writer.writerow(["INV-2004", "STAPLES OFFICE SUPPLIES", "2026-10-03", 420.50, "Office Supplies", "EMP-103", "Ergonomic accessories & paper stock"])
+    writer.writerow(["INV-2005", "Global Data Center Corp", "2026-10-04", 14500.00, "Capital Expenditure", "EMP-104", "Server rack cooling upgrade"])
+    writer.writerow(["INV-2006", "Apex Logistics Group", "2026-10-05", 4880.00, "Shipping & Freight", "EMP-105", "Bulk equipment shipping batch 1"])
+    writer.writerow(["INV-2007", "Apex Logistics Group", "2026-10-05", 4920.00, "Shipping & Freight", "EMP-105", "Bulk equipment shipping batch 2"])
+    writer.writerow(["INV-2008", "", "2026-10-06", 750.00, "Consulting", "EMP-106", "Vendor name missing anomaly test"])
+    writer.writerow(["INV-2009", "Metro Catering & Dining", "2026-10-07", 650.00, "Meals & Entertainment", "EMP-107", "Executive team conference dinner"])
+    writer.writerow(["INV-2010", "Telecom Network Refund", "2026-10-08", -250.00, "Utilities", "EMP-108", "Erroneous negative line item"])
+    output.seek(0)
+    
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=enterprise_sample_invoices.csv"}
+    )
 
 @app.get("/health")
 def health_check():

@@ -1,118 +1,293 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Invoice & Expense Checker Assistant — Enterprise AI</title>
+  <title>InvoiceCompliance.AI — Enterprise Expense Compliance & Fraud Detection</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-    body { font-family: 'Inter', sans-serif; }
-    .badge-pass { background-color: #10b98120; color: #34d399; border: 1px solid #10b98140; }
-    .badge-review { background-color: #f59e0b20; color: #fbbf24; border: 1px solid #f59e0b40; }
-    .badge-fail { background-color: #ef444420; color: #f87171; border: 1px solid #ef444440; }
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    code, pre, .font-mono { font-family: 'JetBrains Mono', monospace; }
+    .gradient-text {
+      background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .badge-pass { background-color: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-review { background-color: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .badge-fail { background-color: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .hero-glow {
+      background: radial-gradient(circle at 50% 20%, rgba(99, 102, 241, 0.18) 0%, rgba(15, 23, 42, 0) 70%);
+    }
   </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
 
-  <!-- Toast Notification Container -->
-  <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 border border-slate-700 text-white text-xs font-semibold px-4 py-3 rounded-lg shadow-xl hidden z-50 flex items-center space-x-2">
-    <i data-lucide="info" class="w-4 h-4 text-indigo-400"></i>
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 border border-slate-700 text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-2xl hidden z-50 flex items-center space-x-3 transition-all duration-300">
+    <div class="p-1 bg-indigo-500/20 text-indigo-400 rounded-lg">
+      <i data-lucide="info" class="w-4 h-4"></i>
+    </div>
     <span id="toastMsg">Notification message</span>
   </div>
 
-  <!-- Navigation Bar -->
-  <header class="bg-slate-800/80 backdrop-blur border-b border-slate-700 sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <div class="flex items-center space-x-3">
-        <div class="p-2 bg-indigo-600 rounded-lg text-white">
+  <!-- Global Sticky Navigation Bar -->
+  <header class="bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
+      
+      <!-- Brand Logo -->
+      <div class="flex items-center space-x-3 cursor-pointer" onclick="switchMainView('landingView')">
+        <div class="p-2.5 bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 rounded-xl text-white shadow-lg shadow-indigo-500/25">
           <i data-lucide="shield-check" class="w-6 h-6"></i>
         </div>
         <div>
-          <h1 class="text-lg font-bold tracking-tight text-white">Invoice Compliance & Expense Checker</h1>
-          <p class="text-xs text-slate-400">Microsoft Hackathon Enterprise AI Edition</p>
+          <div class="flex items-center space-x-2">
+            <span class="text-lg font-bold tracking-tight text-white">InvoiceCompliance<span class="text-indigo-400">.AI</span></span>
+            <span class="text-[10px] font-extrabold uppercase tracking-wider bg-indigo-500/10 text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-500/30">Microsoft Hackathon</span>
+          </div>
+          <p class="text-[11px] text-slate-400 flex items-center space-x-1.5 mt-0.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>API Online • SQLite Ready • RapidFuzz & Benford Active</span>
+          </p>
         </div>
       </div>
-      
-      <div class="flex items-center space-x-3">
-        <a href="landing.html" class="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold px-3 py-2 rounded-lg transition border border-slate-700">
-          <i data-lucide="home" class="w-3.5 h-3.5"></i>
-          <span>Landing Page</span>
+
+      <!-- Navigation Tabs -->
+      <nav class="hidden lg:flex items-center space-x-1 bg-slate-900/80 p-1.5 rounded-xl border border-slate-800/80 text-xs font-semibold">
+        <button onclick="switchMainView('landingView')" id="navLanding" class="px-3.5 py-1.5 rounded-lg text-indigo-400 bg-indigo-500/10 transition">Overview</button>
+        <button onclick="switchMainView('studioView')" id="navStudio" class="px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition">Audit Studio</button>
+        <button onclick="switchMainView('fraudView')" id="navFraud" class="px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition">Fraud Lab</button>
+        <button onclick="switchMainView('vendorView')" id="navVendor" class="px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition">Vendor Risk</button>
+        <button onclick="switchMainView('auditView')" id="navAudit" class="px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition">SOX Audit Logs</button>
+        <a href="/docs" target="_blank" class="px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center space-x-1">
+          <span>API Docs</span>
+          <i data-lucide="external-link" class="w-3 h-3"></i>
+        </a>
+      </nav>
+
+      <!-- Quick Action Controls -->
+      <div class="flex items-center space-x-2.5">
+        <a href="/sample-csv" class="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-700 transition" title="Download enterprise sample dataset with clean + anomaly records">
+          <i data-lucide="file-down" class="w-3.5 h-3.5 text-indigo-400"></i>
+          <span class="hidden sm:inline">Sample CSV</span>
         </a>
 
-        <a href="http://localhost:8000/export-exceptions-csv" target="_blank" class="flex items-center space-x-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-semibold px-3 py-2 rounded-lg transition border border-slate-600">
-          <i data-lucide="download" class="w-3.5 h-3.5"></i>
-          <span>Export CSV</span>
-        </a>
-
-        <div class="flex items-center bg-slate-700/60 rounded-lg px-3 py-1.5 border border-slate-600">
-          <label class="text-xs text-slate-300 font-medium mr-2">Limit Limit:</label>
-          <span class="text-xs text-indigo-400 font-bold">$</span>
-          <input type="number" id="limitInput" value="5000" class="w-20 bg-slate-900 text-white text-xs font-semibold px-2 py-1 rounded border border-slate-600 focus:outline-none focus:border-indigo-500">
-          <button onclick="triggerReAudit()" class="ml-2 text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-2 py-1 rounded transition">Update</button>
-        </div>
-
-        <button onclick="seedDemoData()" class="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-2 rounded-lg transition shadow">
-          <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-          <span>Seed Demo Cases</span>
+        <button onclick="seedDemoAndOpenStudio()" class="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3.5 py-2 rounded-lg shadow-lg shadow-emerald-600/25 transition">
+          <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
+          <span>Instant Demo</span>
         </button>
+
+        <a href="/export-exceptions-csv" target="_blank" class="flex items-center space-x-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 text-xs font-semibold px-3 py-2 rounded-lg border border-indigo-500/30 transition">
+          <i data-lucide="download" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Export CSV</span>
+        </a>
       </div>
+
     </div>
   </header>
 
-  <!-- Main Container -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+  <!-- ========================================== -->
+  <!-- VIEW 1: PRODUCT LANDING & OVERVIEW         -->
+  <!-- ========================================== -->
+  <section id="landingView" class="space-y-24 pb-20">
+    
+    <!-- Hero Section -->
+    <div class="hero-glow pt-20 pb-16 border-b border-slate-800/60 relative overflow-hidden">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8 relative z-10">
+        
+        <div class="inline-flex items-center space-x-2 bg-indigo-500/10 border border-indigo-500/20 px-4 py-1.5 rounded-full text-xs font-semibold text-indigo-300">
+          <span class="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>Enterprise AI Financial Compliance & Anti-Fraud Engine</span>
+        </div>
+
+        <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight max-w-5xl mx-auto leading-tight">
+          Automate Expense Auditing & Stop <span class="gradient-text">Invoice Fraud</span> in Real Time
+        </h1>
+
+        <p class="text-lg sm:text-xl text-slate-400 max-w-3xl mx-auto leading-relaxed">
+          Powered by <strong>Benford's Law statistical screening</strong>, <strong>RapidFuzz fuzzy duplicate matching</strong>, <strong>split-transaction structuring detection</strong>, and <strong>Azure OpenAI evidence-based audit explanations</strong>.
+        </p>
+
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+          <button onclick="switchMainView('studioView')" class="w-full sm:w-auto flex items-center justify-center space-x-2 text-sm font-bold bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 rounded-xl shadow-xl shadow-indigo-500/30 transition transform hover:-translate-y-0.5">
+            <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+            <span>Launch Audit Studio</span>
+          </button>
+          <a href="/sample-csv" class="w-full sm:w-auto flex items-center justify-center space-x-2 text-sm font-bold bg-slate-900 hover:bg-slate-800 text-slate-200 px-8 py-4 rounded-xl border border-slate-700 transition">
+            <i data-lucide="download" class="w-5 h-5 text-indigo-400"></i>
+            <span>Download Sample Invoices CSV</span>
+          </a>
+        </div>
+
+        <!-- Live Live Ticker Badges -->
+        <div class="pt-10 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto text-xs text-slate-300 font-medium">
+          <div class="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex items-center space-x-2.5 justify-center">
+            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
+            <span>SOX 404 & GAAP Audit Ready</span>
+          </div>
+          <div class="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex items-center space-x-2.5 justify-center">
+            <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
+            <span>RapidFuzz Similarity Matching</span>
+          </div>
+          <div class="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex items-center space-x-2.5 justify-center">
+            <i data-lucide="trending-up" class="w-4 h-4 text-purple-400"></i>
+            <span>Benford Statistical Screening</span>
+          </div>
+          <div class="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex items-center space-x-2.5 justify-center">
+            <i data-lucide="cpu" class="w-4 h-4 text-indigo-400"></i>
+            <span>Azure OpenAI Audit Reasoning</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Architecture & Pipeline Flowchart -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+      <div class="text-center space-y-3 max-w-2xl mx-auto">
+        <h2 class="text-xs font-bold uppercase tracking-widest text-indigo-400">Processing Pipeline</h2>
+        <p class="text-3xl font-extrabold text-white">How InvoiceCompliance.AI Validates Every Dollar</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-6 gap-3 text-xs">
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-2 text-center">
+          <div class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 mx-auto flex items-center justify-center font-bold font-mono">1</div>
+          <h4 class="font-bold text-white">Ingestion & Loader</h4>
+          <p class="text-[11px] text-slate-400">CSV, Excel, or Kaggle files loaded & validated.</p>
+        </div>
+
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-2 text-center">
+          <div class="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 mx-auto flex items-center justify-center font-bold font-mono">2</div>
+          <h4 class="font-bold text-white">Schema Normalizer</h4>
+          <p class="text-[11px] text-slate-400">Fuzzy column alias mapper unifies target schema.</p>
+        </div>
+
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-2 text-center">
+          <div class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 mx-auto flex items-center justify-center font-bold font-mono">3</div>
+          <h4 class="font-bold text-white">Rule Engine</h4>
+          <p class="text-[11px] text-slate-400">Required fields, limits, weekend dates & categories.</p>
+        </div>
+
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-2 text-center">
+          <div class="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 mx-auto flex items-center justify-center font-bold font-mono">4</div>
+          <h4 class="font-bold text-white">RapidFuzz & Splits</h4>
+          <p class="text-[11px] text-slate-400">Catches exact/fuzzy duplicate vendors & split invoices.</p>
+        </div>
+
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-2 text-center">
+          <div class="w-8 h-8 rounded-lg bg-pink-500/10 text-pink-400 mx-auto flex items-center justify-center font-bold font-mono">5</div>
+          <h4 class="font-bold text-white">Benford Screening</h4>
+          <p class="text-[11px] text-slate-400">Evaluates statistical first-digit distribution anomalies.</p>
+        </div>
+
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-2 text-center">
+          <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 mx-auto flex items-center justify-center font-bold font-mono">6</div>
+          <h4 class="font-bold text-white">AI Audit Decision</h4>
+          <p class="text-[11px] text-slate-400">Azure OpenAI generates factual evidence explanations.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interactive ROI & Fraud Exposure Calculator -->
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950/40 p-8 rounded-2xl border border-slate-800 shadow-2xl space-y-6">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+          <div>
+            <h3 class="text-lg font-bold text-white flex items-center space-x-2">
+              <i data-lucide="calculator" class="w-5 h-5 text-indigo-400"></i>
+              <span>Interactive Enterprise Fraud & Duplicate Exposure Calculator</span>
+            </h3>
+            <p class="text-xs text-slate-400 mt-1">Estimate recoverable leakages based on ACFE industry benchmark metrics</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="space-y-4 text-xs">
+            <div>
+              <div class="flex justify-between font-semibold text-slate-300 mb-1">
+                <span>Annual Invoices Processed:</span>
+                <span id="roiVolumeLabel" class="text-indigo-400 font-bold">25,000</span>
+              </div>
+              <input type="range" id="roiVolume" min="5000" max="250000" step="5000" value="25000" oninput="calculateROI()" class="w-full accent-indigo-500">
+            </div>
+
+            <div>
+              <div class="flex justify-between font-semibold text-slate-300 mb-1">
+                <span>Average Invoice Value ($):</span>
+                <span id="roiAvgLabel" class="text-indigo-400 font-bold">$1,200</span>
+              </div>
+              <input type="range" id="roiAvg" min="200" max="10000" step="100" value="1200" oninput="calculateROI()" class="w-full accent-indigo-500">
+            </div>
+          </div>
+
+          <div class="bg-slate-950/70 p-5 rounded-xl border border-slate-800 flex flex-col justify-center space-y-3">
+            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Estimated Annual Leakage Recovered</p>
+            <h4 id="roiRecovered" class="text-3xl font-extrabold text-emerald-400">$360,000</h4>
+            <p class="text-[11px] text-slate-400 leading-relaxed">
+              Based on ACFE (Association of Certified Fraud Examiners) average 1.2% duplicate payment and structuring evasion rates in manual AP workflows.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ========================================== -->
+  <!-- VIEW 2: LIVE AUDIT STUDIO (DASHBOARD)      -->
+  <!-- ========================================== -->
+  <section id="studioView" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
     <!-- KPI Summary Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-      
-      <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-sm flex items-center justify-between">
+      <div class="bg-slate-900 p-5 rounded-xl border border-slate-800 shadow-sm flex items-center justify-between">
         <div>
           <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Total Invoices</p>
           <h3 id="statTotal" class="text-2xl font-bold text-white mt-1">--</h3>
-          <p class="text-xs text-slate-400 mt-1">Ingested dataset</p>
+          <p class="text-xs text-slate-400 mt-1">Ingested records</p>
         </div>
         <div class="p-3 bg-blue-500/10 text-blue-400 rounded-lg border border-blue-500/20">
           <i data-lucide="file-text" class="w-6 h-6"></i>
         </div>
       </div>
 
-      <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-sm flex items-center justify-between">
+      <div class="bg-slate-900 p-5 rounded-xl border border-slate-800 shadow-sm flex items-center justify-between">
         <div>
-          <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Passed</p>
+          <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Passed Compliance</p>
           <h3 id="statPassed" class="text-2xl font-bold text-emerald-400 mt-1">--</h3>
-          <p class="text-xs text-emerald-500/80 mt-1">Clean compliance</p>
+          <p class="text-xs text-emerald-500/80 mt-1">Zero violations detected</p>
         </div>
         <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-lg border border-emerald-500/20">
           <i data-lucide="check-circle-2" class="w-6 h-6"></i>
         </div>
       </div>
 
-      <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-sm flex items-center justify-between">
+      <div class="bg-slate-900 p-5 rounded-xl border border-slate-800 shadow-sm flex items-center justify-between">
         <div>
           <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Exceptions</p>
           <h3 id="statExceptions" class="text-2xl font-bold text-amber-400 mt-1">--</h3>
-          <p id="statExceptionsDetail" class="text-xs text-amber-500/80 mt-1">Flagged for audit</p>
+          <p id="statExceptionsDetail" class="text-xs text-amber-500/80 mt-1">Flagged for review</p>
         </div>
         <div class="p-3 bg-amber-500/10 text-amber-400 rounded-lg border border-amber-500/20">
           <i data-lucide="alert-triangle" class="w-6 h-6"></i>
         </div>
       </div>
 
-      <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-sm flex items-center justify-between">
+      <div class="bg-slate-900 p-5 rounded-xl border border-slate-800 shadow-sm flex items-center justify-between">
         <div>
           <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Total Spend</p>
           <h3 id="statAmount" class="text-2xl font-bold text-indigo-400 mt-1">$--</h3>
-          <p class="text-xs text-indigo-300/80 mt-1">Cumulative amount</p>
+          <p class="text-xs text-indigo-300/80 mt-1">Cumulative audited amount</p>
         </div>
         <div class="p-3 bg-indigo-500/10 text-indigo-400 rounded-lg border border-indigo-500/20">
           <i data-lucide="dollar-sign" class="w-6 h-6"></i>
         </div>
       </div>
 
-      <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-sm flex items-center justify-between">
+      <div class="bg-slate-900 p-5 rounded-xl border border-slate-800 shadow-sm flex items-center justify-between">
         <div>
           <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Avg Risk Score</p>
           <h3 id="statAvgRisk" class="text-2xl font-bold text-purple-400 mt-1">--</h3>
@@ -122,282 +297,292 @@
           <i data-lucide="activity" class="w-6 h-6"></i>
         </div>
       </div>
-
     </div>
 
     <!-- Drag & Drop Dataset File Upload Section -->
-    <div class="bg-slate-800/80 p-6 rounded-xl border border-slate-700 shadow-sm">
+    <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-sm">
       <div class="flex items-center justify-between mb-4">
         <div>
           <h2 class="text-sm font-semibold text-white flex items-center space-x-2">
             <i data-lucide="upload-cloud" class="w-4 h-4 text-indigo-400"></i>
             <span>Import Dataset File (CSV / Excel)</span>
           </h2>
-          <p class="text-xs text-slate-400 mt-0.5">Upload custom invoice datasets directly for automated schema mapping and rule checking</p>
+          <p class="text-xs text-slate-400 mt-0.5">Drag and drop any custom invoice dataset or downloaded sample CSV for automated schema normalization and auditing.</p>
         </div>
-        <span id="uploadStatus" class="text-xs font-semibold text-emerald-400"></span>
+        <div class="flex items-center space-x-3">
+          <a href="/sample-csv" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold underline flex items-center space-x-1">
+            <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+            <span>Need sample data? Download CSV</span>
+          </a>
+          <span id="uploadStatus" class="text-xs font-semibold text-emerald-400"></span>
+        </div>
       </div>
 
-      <div class="border-2 border-dashed border-slate-600 hover:border-indigo-500 rounded-lg p-6 text-center transition cursor-pointer bg-slate-900/40" id="dropZone" onclick="document.getElementById('fileInput').click()">
+      <div class="border-2 border-dashed border-slate-700 hover:border-indigo-500 rounded-xl p-8 text-center transition cursor-pointer bg-slate-950/60" id="dropZone" onclick="document.getElementById('fileInput').click()">
         <input type="file" id="fileInput" class="hidden" accept=".csv, .xlsx, .xls" onchange="handleFileUpload(this.files[0])">
-        <i data-lucide="file-up" class="w-8 h-8 text-slate-400 mx-auto mb-2"></i>
-        <p class="text-xs font-medium text-slate-300">Click or drag & drop Kaggle invoice CSV/Excel dataset file here</p>
-        <p class="text-[11px] text-slate-500 mt-1">Supports .csv, .xls, .xlsx files</p>
+        <i data-lucide="file-up" class="w-9 h-9 text-slate-400 mx-auto mb-2"></i>
+        <p class="text-xs font-semibold text-slate-200">Click or drag & drop Kaggle or custom invoice CSV/Excel file here</p>
+        <p class="text-[11px] text-slate-500 mt-1">Supports standard CSV, XLS, XLSX formats • Auto column alias mapping</p>
       </div>
     </div>
 
-    <!-- Visual Analytics Charts Row -->
+    <!-- Live Search & Policy Controls Bar -->
+    <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center space-x-2 flex-1 min-w-[260px]">
+        <i data-lucide="search" class="w-4 h-4 text-slate-400"></i>
+        <input type="text" id="searchInput" oninput="loadData()" placeholder="Search by Invoice ID, Vendor, or Description..." class="w-full bg-slate-950 border border-slate-800 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500">
+      </div>
+
+      <div class="flex items-center space-x-4 text-xs">
+        <div class="flex items-center space-x-2">
+          <label class="text-slate-400 font-medium">Status:</label>
+          <select id="statusFilter" onchange="loadData()" class="bg-slate-950 border border-slate-800 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500">
+            <option value="">All Statuses</option>
+            <option value="PASS">PASS (Clean)</option>
+            <option value="REVIEW">REVIEW Required</option>
+            <option value="FAIL">FAIL (Violations)</option>
+          </select>
+        </div>
+
+        <div class="flex items-center bg-slate-950 rounded-lg px-3 py-1.5 border border-slate-800">
+          <label class="text-slate-400 font-medium mr-2">Policy Limit:</label>
+          <span class="text-indigo-400 font-bold">$</span>
+          <input type="number" id="limitInput" value="5000" class="w-20 bg-slate-900 text-white text-xs font-semibold px-2 py-1 rounded border border-slate-700 focus:outline-none focus:border-indigo-500">
+          <button onclick="triggerReAudit()" class="ml-2 text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-2 py-1 rounded transition">Update</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Exceptions Audit Table -->
+    <div class="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
+      <div class="border-b border-slate-800 px-6 py-4 flex items-center justify-between">
+        <div>
+          <h2 class="text-md font-bold text-white flex items-center space-x-2">
+            <i data-lucide="alert-octagon" class="w-5 h-5 text-amber-400"></i>
+            <span>Compliance Exceptions & AI Findings</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">Click any row to open the interactive Auditor Investigation & Decision Modal</p>
+        </div>
+        <button onclick="loadData()" class="text-xs text-slate-400 hover:text-white flex items-center space-x-1">
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+          <span>Refresh</span>
+        </button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs text-slate-300">
+          <thead class="bg-slate-950/70 text-slate-400 font-semibold uppercase tracking-wider text-[11px] border-b border-slate-800">
+            <tr>
+              <th class="py-3 px-4">Invoice ID</th>
+              <th class="py-3 px-4">Rule Violated</th>
+              <th class="py-3 px-4">Severity</th>
+              <th class="py-3 px-4">Status</th>
+              <th class="py-3 px-4">Evidence & Finding</th>
+              <th class="py-3 px-4">AI Audit Explanation</th>
+              <th class="py-3 px-4">Action</th>
+            </tr>
+          </thead>
+          <tbody id="exceptionsTableBody" class="divide-y divide-slate-800/80 bg-slate-900/50">
+            <tr>
+              <td colspan="7" class="py-8 text-center text-slate-500">Loading audit findings...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Invoices Registry Table -->
+    <div class="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
+      <div class="border-b border-slate-800 px-6 py-4 flex items-center justify-between">
+        <div>
+          <h2 class="text-md font-bold text-white flex items-center space-x-2">
+            <i data-lucide="database" class="w-5 h-5 text-indigo-400"></i>
+            <span>All Invoices Registry & Risk Scores</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">Sorted by Risk Score (0 - 100 scale) to highlight high-risk transactions first</p>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs text-slate-300">
+          <thead class="bg-slate-950/70 text-slate-400 font-semibold uppercase tracking-wider text-[11px] border-b border-slate-800">
+            <tr>
+              <th class="py-3 px-4">Invoice ID</th>
+              <th class="py-3 px-4">Vendor Name</th>
+              <th class="py-3 px-4">Amount</th>
+              <th class="py-3 px-4">Date</th>
+              <th class="py-3 px-4">Category</th>
+              <th class="py-3 px-4">Risk Score</th>
+              <th class="py-3 px-4">Status</th>
+              <th class="py-3 px-4">Decision</th>
+              <th class="py-3 px-4">Action</th>
+            </tr>
+          </thead>
+          <tbody id="invoicesTableBody" class="divide-y divide-slate-800/80 bg-slate-900/50">
+            <tr>
+              <td colspan="9" class="py-8 text-center text-slate-500">Loading invoices...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ========================================== -->
+  <!-- VIEW 3: FRAUD LAB (BENFORD & SPLITS)       -->
+  <!-- ========================================== -->
+  <section id="fraudView" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+      <div>
+        <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+          <i data-lucide="trending-up" class="w-6 h-6 text-purple-400"></i>
+          <span>Fraud Lab — Advanced Statistical & Structuring Analysis</span>
+        </h2>
+        <p class="text-xs text-slate-400 mt-1">Multi-dimensional forensic anomaly detection based on forensic accounting standards</p>
+      </div>
+      <span id="benfordConformity" class="px-3 py-1 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">Conformity: Loading...</span>
+    </div>
+
+    <!-- Benford's Law Chart -->
+    <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-sm font-bold text-white">Benford's Law First-Digit Statistical Screening</h3>
+          <p class="text-xs text-slate-400 mt-0.5">Compares actual leading digit distribution ($1 \dots 9$) against theoretical natural logarithmic curves to uncover manipulated entries.</p>
+        </div>
+      </div>
+
+      <div class="h-72 bg-slate-950/60 p-4 rounded-xl border border-slate-800">
+        <canvas id="chartBenford"></canvas>
+      </div>
+    </div>
+
+    <!-- Category Spend & Structuring Split Detection Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-sm">
-        <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-4 flex items-center space-x-2">
+      <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-4">
+        <h3 class="text-sm font-bold text-white flex items-center space-x-2">
           <i data-lucide="pie-chart" class="w-4 h-4 text-indigo-400"></i>
           <span>Compliance Status Breakdown</span>
         </h3>
-        <div class="h-48 flex justify-center">
+        <div class="h-56 flex justify-center">
           <canvas id="chartStatus"></canvas>
         </div>
       </div>
 
-      <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-sm">
-        <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-4 flex items-center space-x-2">
+      <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-4">
+        <h3 class="text-sm font-bold text-white flex items-center space-x-2">
           <i data-lucide="bar-chart-3" class="w-4 h-4 text-emerald-400"></i>
-          <span>Spend by Category</span>
+          <span>Spend by Category ($)</span>
         </h3>
-        <div class="h-48 flex justify-center">
+        <div class="h-56 flex justify-center">
           <canvas id="chartCategory"></canvas>
         </div>
       </div>
     </div>
+  </section>
 
-    <!-- Search & Filter Bar -->
-    <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700 flex flex-wrap items-center justify-between gap-4">
-      <div class="flex items-center space-x-2 flex-1 min-w-[240px]">
-        <i data-lucide="search" class="w-4 h-4 text-slate-400"></i>
-        <input type="text" id="searchInput" oninput="loadData()" placeholder="Search by Invoice ID, Vendor, or Description..." class="w-full bg-slate-900 border border-slate-700 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500">
+  <!-- ========================================== -->
+  <!-- VIEW 4: VENDOR RISK INTELLIGENCE           -->
+  <!-- ========================================== -->
+  <section id="vendorView" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div class="border-b border-slate-800 pb-4">
+      <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+        <i data-lucide="building" class="w-6 h-6 text-indigo-400"></i>
+        <span>Vendor Risk & Procurement Intelligence</span>
+      </h2>
+      <p class="text-xs text-slate-400 mt-1">Aggregated vendor risk ranking, violation frequency, and cumulative spend metrics</p>
+    </div>
+
+    <div class="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs text-slate-300">
+          <thead class="bg-slate-950/70 text-slate-400 font-semibold uppercase tracking-wider text-[11px] border-b border-slate-800">
+            <tr>
+              <th class="py-3 px-4">Vendor Name</th>
+              <th class="py-3 px-4">Invoices Submitted</th>
+              <th class="py-3 px-4">Total Audited Spend ($)</th>
+              <th class="py-3 px-4">Violations Flagged</th>
+              <th class="py-3 px-4">Max Risk Score</th>
+              <th class="py-3 px-4">Risk Rating</th>
+            </tr>
+          </thead>
+          <tbody id="vendorTableBody" class="divide-y divide-slate-800/80 bg-slate-900/50">
+            <tr>
+              <td colspan="6" class="py-8 text-center text-slate-500">Loading vendor analytics...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- VIEW 5: SOX AUDIT LOGS & PROFILER          -->
+  <!-- ========================================== -->
+  <section id="auditView" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div class="border-b border-slate-800 pb-4 flex items-center justify-between">
+      <div>
+        <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+          <i data-lucide="history" class="w-6 h-6 text-blue-400"></i>
+          <span>SOX 404 / GAAP Audit Trail Logs</span>
+        </h2>
+        <p class="text-xs text-slate-400 mt-1">Immutable record of automated engine executions and human auditor decisions</p>
+      </div>
+      <a href="/export-exceptions-csv" target="_blank" class="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-4 py-2 rounded-lg border border-slate-700 transition">
+        <i data-lucide="download" class="w-4 h-4"></i>
+        <span>Download Full Audit CSV</span>
+      </a>
+    </div>
+
+    <!-- Data Profiler Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-3">
+        <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Numerical & Spend Profiling</h3>
+        <div class="space-y-2 text-xs">
+          <div class="flex justify-between py-1.5 border-b border-slate-800"><span class="text-slate-400">Minimum Amount:</span> <span id="profMin" class="font-semibold text-slate-200">--</span></div>
+          <div class="flex justify-between py-1.5 border-b border-slate-800"><span class="text-slate-400">Maximum Amount:</span> <span id="profMax" class="font-semibold text-slate-200">--</span></div>
+          <div class="flex justify-between py-1.5 border-b border-slate-800"><span class="text-slate-400">Average Amount:</span> <span id="profAvg" class="font-semibold text-slate-200">--</span></div>
+          <div class="flex justify-between py-1.5"><span class="text-slate-400">Total Cumulative Spend:</span> <span id="profTotal" class="font-semibold text-indigo-400">--</span></div>
+        </div>
       </div>
 
-      <div class="flex items-center space-x-3 text-xs">
-        <label class="text-slate-400 font-medium">Status Filter:</label>
-        <select id="statusFilter" onchange="loadData()" class="bg-slate-900 border border-slate-700 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500">
-          <option value="">All Statuses</option>
-          <option value="PASS">PASS (Clean)</option>
-          <option value="REVIEW">REVIEW Required</option>
-          <option value="FAIL">FAIL (Violations)</option>
-        </select>
+      <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-3">
+        <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Missing Values Per Schema Column</h3>
+        <div id="missingValuesList" class="space-y-1.5 text-xs max-h-48 overflow-y-auto">
+          <p class="text-slate-500">Loading schema metrics...</p>
+        </div>
       </div>
     </div>
 
-    <!-- Tabs Container -->
-    <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-lg">
-      <div class="border-b border-slate-700 bg-slate-800/90 px-6 py-3 flex items-center justify-between">
-        <div class="flex space-x-4">
-          <button onclick="switchTab('exceptionsTab')" id="btnTabExceptions" class="text-sm font-semibold text-indigo-400 border-b-2 border-indigo-500 pb-2 transition">
-            Compliance Exceptions & AI Explanations
-          </button>
-          <button onclick="switchTab('invoicesTab')" id="btnTabInvoices" class="text-sm font-semibold text-slate-400 hover:text-slate-200 pb-2 transition">
-            All Invoices & Risk Scores
-          </button>
-          <button onclick="switchTab('vendorTab')" id="btnTabVendor" class="text-sm font-semibold text-slate-400 hover:text-slate-200 pb-2 transition">
-            Vendor Risk Intelligence
-          </button>
-          <button onclick="switchTab('benfordTab')" id="btnTabBenford" class="text-sm font-semibold text-slate-400 hover:text-slate-200 pb-2 transition">
-            Benford's Law Analysis
-          </button>
-          <button onclick="switchTab('profilerTab')" id="btnTabProfiler" class="text-sm font-semibold text-slate-400 hover:text-slate-200 pb-2 transition">
-            Dataset Profile
-          </button>
-          <button onclick="switchTab('auditTab')" id="btnTabAudit" class="text-sm font-semibold text-slate-400 hover:text-slate-200 pb-2 transition">
-            SOX Audit Logs
-          </button>
-        </div>
-
-        <button onclick="loadData()" class="text-xs text-slate-400 hover:text-white flex items-center space-x-1">
-          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-          <span>Refresh View</span>
-        </button>
+    <!-- Audit Logs Table -->
+    <div class="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs text-slate-300">
+          <thead class="bg-slate-950/70 text-slate-400 font-semibold uppercase tracking-wider text-[11px] border-b border-slate-800">
+            <tr>
+              <th class="py-3 px-4">Timestamp</th>
+              <th class="py-3 px-4">Auditor / System</th>
+              <th class="py-3 px-4">Action</th>
+              <th class="py-3 px-4">Audit Details</th>
+            </tr>
+          </thead>
+          <tbody id="auditTableBody" class="divide-y divide-slate-800/80 bg-slate-900/50">
+            <tr>
+              <td colspan="4" class="py-8 text-center text-slate-500">Loading audit trail...</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-
-      <!-- Tab 1: Exceptions Table & AI Audit Explanation -->
-      <div id="exceptionsTab" class="p-6 space-y-4">
-        <div class="flex items-center justify-between">
-          <h2 class="text-md font-semibold text-white flex items-center space-x-2">
-            <i data-lucide="alert-octagon" class="w-5 h-5 text-amber-400"></i>
-            <span>Rule Engine Violations & AI Audit Findings</span>
-          </h2>
-          <span class="text-xs text-slate-400">Click any row to open Auditor Investigation Modal</span>
-        </div>
-
-        <div class="overflow-x-auto rounded-lg border border-slate-700">
-          <table class="w-full text-left text-xs text-slate-300">
-            <thead class="bg-slate-900/80 text-slate-400 font-semibold uppercase tracking-wider text-[11px] border-b border-slate-700">
-              <tr>
-                <th class="py-3 px-4">Invoice ID</th>
-                <th class="py-3 px-4">Rule Violated</th>
-                <th class="py-3 px-4">Severity</th>
-                <th class="py-3 px-4">Status</th>
-                <th class="py-3 px-4">Evidence & Finding</th>
-                <th class="py-3 px-4">AI Audit Explanation</th>
-                <th class="py-3 px-4">Action</th>
-              </tr>
-            </thead>
-            <tbody id="exceptionsTableBody" class="divide-y divide-slate-700/60 bg-slate-800/40">
-              <tr>
-                <td colspan="7" class="py-8 text-center text-slate-500">Loading audit findings...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Tab 2: All Invoices -->
-      <div id="invoicesTab" class="p-6 space-y-4 hidden">
-        <div class="flex items-center justify-between">
-          <h2 class="text-md font-semibold text-white flex items-center space-x-2">
-            <i data-lucide="database" class="w-5 h-5 text-indigo-400"></i>
-            <span>Ingested Dataset Invoices & Risk Scoring</span>
-          </h2>
-        </div>
-
-        <div class="overflow-x-auto rounded-lg border border-slate-700">
-          <table class="w-full text-left text-xs text-slate-300">
-            <thead class="bg-slate-900/80 text-slate-400 font-semibold uppercase tracking-wider text-[11px] border-b border-slate-700">
-              <tr>
-                <th class="py-3 px-4">Invoice ID</th>
-                <th class="py-3 px-4">Vendor Name</th>
-                <th class="py-3 px-4">Amount</th>
-                <th class="py-3 px-4">Date</th>
-                <th class="py-3 px-4">Category</th>
-                <th class="py-3 px-4">Risk Score</th>
-                <th class="py-3 px-4">Status</th>
-                <th class="py-3 px-4">Decision</th>
-                <th class="py-3 px-4">Action</th>
-              </tr>
-            </thead>
-            <tbody id="invoicesTableBody" class="divide-y divide-slate-700/60 bg-slate-800/40">
-              <tr>
-                <td colspan="9" class="py-8 text-center text-slate-500">Loading invoices...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Tab 3: Vendor Risk Intelligence -->
-      <div id="vendorTab" class="p-6 space-y-6 hidden">
-        <div class="flex items-center justify-between">
-          <div>
-            <h2 class="text-md font-semibold text-white flex items-center space-x-2">
-              <i data-lucide="building" class="w-5 h-5 text-indigo-400"></i>
-              <span>Vendor Risk & Procurement Intelligence</span>
-            </h2>
-            <p class="text-xs text-slate-400 mt-1">Aggregated risk profile, violation frequency, and expenditure per vendor</p>
-          </div>
-        </div>
-
-        <div class="overflow-x-auto rounded-lg border border-slate-700">
-          <table class="w-full text-left text-xs text-slate-300">
-            <thead class="bg-slate-900/80 text-slate-400 font-semibold uppercase tracking-wider text-[11px] border-b border-slate-700">
-              <tr>
-                <th class="py-3 px-4">Vendor Name</th>
-                <th class="py-3 px-4">Invoices Submitted</th>
-                <th class="py-3 px-4">Total Spend ($)</th>
-                <th class="py-3 px-4">Total Violations</th>
-                <th class="py-3 px-4">Max Risk Score</th>
-                <th class="py-3 px-4">Risk Rating</th>
-              </tr>
-            </thead>
-            <tbody id="vendorTableBody" class="divide-y divide-slate-700/60 bg-slate-800/40">
-              <tr>
-                <td colspan="6" class="py-8 text-center text-slate-500">Loading vendor analytics...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Tab 4: Benford's Law Fraud Screening -->
-      <div id="benfordTab" class="p-6 space-y-6 hidden">
-        <div class="flex items-center justify-between">
-          <div>
-            <h2 class="text-md font-semibold text-white flex items-center space-x-2">
-              <i data-lucide="trending-up" class="w-5 h-5 text-purple-400"></i>
-              <span>Benford's Law First-Digit Statistical Screening</span>
-            </h2>
-            <p class="text-xs text-slate-400 mt-1">Detects non-conforming financial data distributions indicative of manual fabrication or fraud</p>
-          </div>
-          <span id="benfordConformity" class="px-3 py-1 rounded text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">Conformity: Loading...</span>
-        </div>
-
-        <div class="h-64 bg-slate-900/40 p-4 rounded-lg border border-slate-700">
-          <canvas id="chartBenford"></canvas>
-        </div>
-      </div>
-
-      <!-- Tab 5: Dataset Profiler -->
-      <div id="profilerTab" class="p-6 space-y-6 hidden">
-        <div class="flex items-center justify-between">
-          <h2 class="text-md font-semibold text-white flex items-center space-x-2">
-            <i data-lucide="bar-chart-2" class="w-5 h-5 text-purple-400"></i>
-            <span>Dataset Data Profiling Summary</span>
-          </h2>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="bg-slate-900/60 p-4 rounded-lg border border-slate-700 space-y-3">
-            <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Numerical & Spend Profiling</h3>
-            <div class="space-y-2 text-xs">
-              <div class="flex justify-between py-1 border-b border-slate-800"><span class="text-slate-400">Min Amount:</span> <span id="profMin" class="font-semibold text-slate-200">--</span></div>
-              <div class="flex justify-between py-1 border-b border-slate-800"><span class="text-slate-400">Max Amount:</span> <span id="profMax" class="font-semibold text-slate-200">--</span></div>
-              <div class="flex justify-between py-1 border-b border-slate-800"><span class="text-slate-400">Average Amount:</span> <span id="profAvg" class="font-semibold text-slate-200">--</span></div>
-              <div class="flex justify-between py-1"><span class="text-slate-400">Total Spend:</span> <span id="profTotal" class="font-semibold text-indigo-400">--</span></div>
-            </div>
-          </div>
-
-          <div class="bg-slate-900/60 p-4 rounded-lg border border-slate-700 space-y-3">
-            <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Missing Values Per Column</h3>
-            <div id="missingValuesList" class="space-y-1.5 text-xs">
-              <p class="text-slate-500">Loading schema metrics...</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tab 6: Audit Trail -->
-      <div id="auditTab" class="p-6 space-y-4 hidden">
-        <div class="flex items-center justify-between">
-          <h2 class="text-md font-semibold text-white flex items-center space-x-2">
-            <i data-lucide="history" class="w-5 h-5 text-blue-400"></i>
-            <span>SOX / GAAP Audit Trail Logs</span>
-          </h2>
-        </div>
-
-        <div class="overflow-x-auto rounded-lg border border-slate-700">
-          <table class="w-full text-left text-xs text-slate-300">
-            <thead class="bg-slate-900/80 text-slate-400 font-semibold uppercase tracking-wider text-[11px] border-b border-slate-700">
-              <tr>
-                <th class="py-3 px-4">Timestamp</th>
-                <th class="py-3 px-4">User</th>
-                <th class="py-3 px-4">Action</th>
-                <th class="py-3 px-4">Details</th>
-              </tr>
-            </thead>
-            <tbody id="auditTableBody" class="divide-y divide-slate-700/60 bg-slate-800/40">
-              <tr>
-                <td colspan="4" class="py-8 text-center text-slate-500">Loading audit trail...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
     </div>
+  </section>
 
-  </main>
-
-  <!-- Auditor Investigation Modal -->
-  <div id="auditModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
-    <div class="bg-slate-800 border border-slate-700 rounded-xl max-w-2xl w-full p-6 space-y-6 shadow-2xl">
-      <div class="flex items-center justify-between border-b border-slate-700 pb-4">
+  <!-- ========================================== -->
+  <!-- AUDITOR INVESTIGATION & DECISION MODAL     -->
+  <!-- ========================================== -->
+  <div id="auditModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 space-y-6 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4">
         <div>
           <h3 class="text-md font-bold text-white flex items-center space-x-2">
             <i data-lucide="file-search" class="w-5 h-5 text-indigo-400"></i>
@@ -405,41 +590,41 @@
           </h3>
           <p class="text-xs text-slate-400" id="modalInvId">Invoice ID: --</p>
         </div>
-        <button onclick="closeModal()" class="text-slate-400 hover:text-white">
+        <button onclick="closeModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
 
-      <div class="grid grid-cols-2 gap-4 text-xs bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+      <div class="grid grid-cols-2 gap-4 text-xs bg-slate-950 p-4 rounded-xl border border-slate-800">
         <div><span class="text-slate-400">Vendor:</span> <span id="modalVendor" class="font-semibold text-slate-200">--</span></div>
         <div><span class="text-slate-400">Amount:</span> <span id="modalAmount" class="font-semibold text-emerald-400">--</span></div>
-        <div><span class="text-slate-400">Date:</span> <span id="modalDate" class="text-slate-300">--</span></div>
+        <div><span class="text-slate-400">Invoice Date:</span> <span id="modalDate" class="text-slate-300">--</span></div>
         <div><span class="text-slate-400">Category:</span> <span id="modalCategory" class="text-slate-300">--</span></div>
         <div><span class="text-slate-400">Employee ID:</span> <span id="modalEmp" class="text-slate-300">--</span></div>
         <div><span class="text-slate-400">Risk Score:</span> <span id="modalRisk" class="font-bold text-purple-400">--</span></div>
       </div>
 
       <div class="space-y-2">
-        <h4 class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Rule Violations & AI Finding</h4>
-        <div id="modalExceptions" class="space-y-2 max-h-40 overflow-y-auto">
+        <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Rule Violations & AI Finding</h4>
+        <div id="modalExceptions" class="space-y-2 max-h-44 overflow-y-auto">
           <p class="text-slate-500 text-xs">No violations.</p>
         </div>
       </div>
 
-      <div class="space-y-3 border-t border-slate-700 pt-4">
-        <label class="text-xs font-semibold text-slate-300 uppercase tracking-wider block">Audit Decision Notes:</label>
-        <textarea id="modalNotes" rows="2" class="w-full bg-slate-900 border border-slate-700 text-xs text-white rounded-lg p-2.5 focus:outline-none focus:border-indigo-500" placeholder="Enter auditor justification notes..."></textarea>
+      <div class="space-y-3 border-t border-slate-800 pt-4">
+        <label class="text-xs font-bold text-slate-300 uppercase tracking-wider block">Auditor Justification Notes:</label>
+        <textarea id="modalNotes" rows="2" class="w-full bg-slate-950 border border-slate-800 text-xs text-white rounded-lg p-2.5 focus:outline-none focus:border-indigo-500" placeholder="Enter auditor justification comments..."></textarea>
 
         <div class="flex items-center justify-end space-x-3 pt-2">
-          <button onclick="submitDecision('APPROVE')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-lg transition flex items-center space-x-1">
+          <button onclick="submitDecision('APPROVE')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2.5 rounded-lg transition flex items-center space-x-1.5 shadow-lg shadow-emerald-600/20">
             <i data-lucide="check" class="w-4 h-4"></i>
             <span>Approve Invoice</span>
           </button>
-          <button onclick="submitDecision('ESCALATE')" class="bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold px-4 py-2 rounded-lg transition flex items-center space-x-1">
+          <button onclick="submitDecision('ESCALATE')" class="bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold px-4 py-2.5 rounded-lg transition flex items-center space-x-1.5 shadow-lg shadow-amber-600/20">
             <i data-lucide="alert-circle" class="w-4 h-4"></i>
             <span>Escalate</span>
           </button>
-          <button onclick="submitDecision('REJECT')" class="bg-red-600 hover:bg-red-500 text-white text-xs font-semibold px-4 py-2 rounded-lg transition flex items-center space-x-1">
+          <button onclick="submitDecision('REJECT')" class="bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-4 py-2.5 rounded-lg transition flex items-center space-x-1.5 shadow-lg shadow-red-600/20">
             <i data-lucide="x-circle" class="w-4 h-4"></i>
             <span>Reject / Mark Fraud</span>
           </button>
@@ -448,8 +633,19 @@
     </div>
   </div>
 
+  <!-- Global Footer -->
+  <footer class="mt-auto border-t border-slate-800/80 bg-slate-950 py-10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-3">
+      <div class="flex items-center justify-center space-x-2 text-slate-400 text-xs font-semibold">
+        <i data-lucide="shield-check" class="w-4 h-4 text-indigo-400"></i>
+        <span>InvoiceCompliance.AI — Enterprise AI Financial Compliance Assistant</span>
+      </div>
+      <p class="text-xs text-slate-500">Built for Microsoft Hackathon • Fast, Deterministic, & Evidence-Based</p>
+    </div>
+  </footer>
+
   <script>
-    const API_BASE = 'http://localhost:8000';
+    const API_BASE = '';
     let chartStatusObj = null;
     let chartCategoryObj = null;
     let chartBenfordObj = null;
@@ -471,6 +667,50 @@
         console.error('Fetch error:', err);
         return null;
       }
+    }
+
+    function switchMainView(viewId) {
+      ['landingView', 'studioView', 'fraudView', 'vendorView', 'auditView'].forEach(v => {
+        document.getElementById(v).classList.add('hidden');
+      });
+      document.getElementById(viewId).classList.remove('hidden');
+
+      const navMap = {
+        'landingView': 'navLanding',
+        'studioView': 'navStudio',
+        'fraudView': 'navFraud',
+        'vendorView': 'navVendor',
+        'auditView': 'navAudit'
+      };
+
+      ['navLanding', 'navStudio', 'navFraud', 'navVendor', 'navAudit'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.className = 'px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition';
+      });
+
+      const activeNav = document.getElementById(navMap[viewId]);
+      if (activeNav) {
+        activeNav.className = 'px-3.5 py-1.5 rounded-lg text-indigo-400 bg-indigo-500/10 font-bold transition';
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function calculateROI() {
+      const vol = Number(document.getElementById('roiVolume').value);
+      const avg = Number(document.getElementById('roiAvg').value);
+      document.getElementById('roiVolumeLabel').innerText = vol.toLocaleString();
+      document.getElementById('roiAvgLabel').innerText = `$${avg.toLocaleString()}`;
+
+      // ACFE 1.2% average leakage rate
+      const totalSpend = vol * avg;
+      const recovered = Math.round(totalSpend * 0.012);
+      document.getElementById('roiRecovered').innerText = `$${recovered.toLocaleString()}`;
+    }
+
+    async function seedDemoAndOpenStudio() {
+      await seedDemoData();
+      switchMainView('studioView');
     }
 
     async function loadData() {
@@ -498,7 +738,7 @@
           tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-500">No compliance violations detected. All invoices pass policy rules!</td></tr>`;
         } else {
           tbody.innerHTML = excRes.exceptions.map(e => `
-            <tr class="hover:bg-slate-700/40 transition cursor-pointer" onclick="openModal('${e.invoice_id}')">
+            <tr class="hover:bg-slate-800/40 transition cursor-pointer" onclick="openModal('${e.invoice_id}')">
               <td class="py-3 px-4 font-mono font-medium text-slate-200">${e.invoice_id}</td>
               <td class="py-3 px-4 font-semibold text-slate-300">${e.rule}</td>
               <td class="py-3 px-4">
@@ -536,7 +776,7 @@
           catMap[catName] = (catMap[catName] || 0) + (i.amount > 0 ? i.amount : 0);
           
           return `
-            <tr class="hover:bg-slate-700/40 transition cursor-pointer" onclick="openModal('${i.invoice_id}')">
+            <tr class="hover:bg-slate-800/40 transition cursor-pointer" onclick="openModal('${i.invoice_id}')">
               <td class="py-3 px-4 font-mono font-medium text-slate-200">${i.invoice_id}</td>
               <td class="py-3 px-4 text-slate-300">${i.vendor_name || '<span class="text-red-400 italic">Missing</span>'}</td>
               <td class="py-3 px-4 font-semibold ${i.amount < 0 ? 'text-red-400' : 'text-emerald-400'}">${i.amount != null ? '$' + Number(i.amount).toLocaleString() : '--'}</td>
@@ -564,7 +804,7 @@
       if (vendorRes && vendorRes.vendors) {
         const tbody = document.getElementById('vendorTableBody');
         tbody.innerHTML = vendorRes.vendors.map(v => `
-          <tr class="hover:bg-slate-700/30 transition">
+          <tr class="hover:bg-slate-800/30 transition">
             <td class="py-3 px-4 font-semibold text-slate-200">${v.vendor_name}</td>
             <td class="py-3 px-4 text-slate-300">${v.invoice_count}</td>
             <td class="py-3 px-4 text-indigo-400 font-semibold">$${v.total_spend.toLocaleString()}</td>
@@ -608,7 +848,7 @@
       if (auditRes && auditRes.audit_trail) {
         const tbody = document.getElementById('auditTableBody');
         tbody.innerHTML = auditRes.audit_trail.map(a => `
-          <tr class="hover:bg-slate-700/30 transition">
+          <tr class="hover:bg-slate-800/30 transition">
             <td class="py-3 px-4 font-mono text-slate-400">${a.timestamp}</td>
             <td class="py-3 px-4 text-slate-300 font-semibold">${a.user_name}</td>
             <td class="py-3 px-4 text-indigo-400 font-medium">${a.action}</td>
@@ -639,13 +879,13 @@
         excDiv.innerHTML = `<p class="text-emerald-400 text-xs font-semibold">No rule violations. Clean compliance record!</p>`;
       } else {
         excDiv.innerHTML = inv.exceptions.map(e => `
-          <div class="bg-slate-900 p-3 rounded border border-slate-700 text-xs space-y-1">
+          <div class="bg-slate-900 p-3 rounded-lg border border-slate-800 text-xs space-y-1">
             <div class="flex justify-between items-center font-semibold text-slate-200">
               <span>${e.rule}</span>
               <span class="text-[10px] font-bold ${e.severity === 'HIGH' ? 'text-red-400' : 'text-amber-400'}">${e.severity}</span>
             </div>
             <p class="text-slate-400">${e.reason}</p>
-            <p class="text-indigo-300 text-[11px] bg-indigo-500/10 p-1.5 rounded mt-1">${e.ai_explanation}</p>
+            <p class="text-indigo-300 text-[11px] bg-indigo-500/10 p-2 rounded mt-1">${e.ai_explanation}</p>
           </div>
         `).join('');
       }
@@ -779,16 +1019,18 @@
       const limit = document.getElementById('limitInput').value || 5000;
 
       try {
-        const res = await fetch(`${API_BASE}/upload-dataset?amount_limit=${limit}`, {
+        const res = await fetch(`/upload-dataset?amount_limit=${limit}`, {
           method: 'POST',
           body: formData
         });
         const data = await res.json();
         if (res.ok) {
           statusEl.innerText = `Successfully imported ${data.processed_rows} records from ${data.filename}!`;
+          showToast(`Ingested ${data.processed_rows} records!`);
           await loadData();
         } else {
           statusEl.innerText = `Error: ${data.detail}`;
+          showToast(`Upload failed: ${data.detail}`);
         }
       } catch (err) {
         statusEl.innerText = 'Upload failed.';
@@ -798,38 +1040,20 @@
     async function seedDemoData() {
       const limit = document.getElementById('limitInput').value || 5000;
       await fetchAPI(`/seed-demo?amount_limit=${limit}`, { method: 'POST' });
+      showToast('Demo dataset loaded and audited!');
       await loadData();
     }
 
     async function triggerReAudit() {
       const limit = document.getElementById('limitInput').value || 5000;
       await fetchAPI(`/run-audit?amount_limit=${limit}`, { method: 'POST' });
+      showToast(`Re-audit completed with $${limit} threshold!`);
       await loadData();
-    }
-
-    function switchTab(tabId) {
-      ['exceptionsTab', 'invoicesTab', 'vendorTab', 'benfordTab', 'profilerTab', 'auditTab'].forEach(t => {
-        document.getElementById(t).classList.add('hidden');
-      });
-      document.getElementById(tabId).classList.remove('hidden');
-
-      ['btnTabExceptions', 'btnTabInvoices', 'btnTabVendor', 'btnTabBenford', 'btnTabProfiler', 'btnTabAudit'].forEach(b => {
-        document.getElementById(b).className = 'text-sm font-semibold text-slate-400 hover:text-slate-200 pb-2 transition';
-      });
-      
-      const activeMap = {
-        'exceptionsTab': 'btnTabExceptions',
-        'invoicesTab': 'btnTabInvoices',
-        'vendorTab': 'btnTabVendor',
-        'benfordTab': 'btnTabBenford',
-        'profilerTab': 'btnTabProfiler',
-        'auditTab': 'btnTabAudit'
-      };
-      document.getElementById(activeMap[tabId]).className = 'text-sm font-semibold text-indigo-400 border-b-2 border-indigo-500 pb-2 transition';
     }
 
     window.onload = async () => {
       lucide.createIcons();
+      calculateROI();
       await loadData();
     };
   </script>
