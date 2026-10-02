@@ -75,22 +75,34 @@ def evaluate_invoice_rules(invoice: Dict[str, Any], amount_limit: float = DEFAUL
             "severity": "HIGH"
         })
         
-    # Rule 2: Amount Validation (Numeric & > 0)
+    # Rule 2: Amount Validation (Numeric, Multi-Currency Normalization & > 0)
     amount = invoice.get("amount")
     val_amount = None
     if amount is not None:
         try:
-            val_amount = float(amount)
-            if val_amount <= 0:
+            from services.currency import detect_and_normalize_currency
+            usd_amt, detected_curr, orig_amt = detect_and_normalize_currency(amount)
+            if usd_amt is not None:
+                val_amount = usd_amt
+                if val_amount <= 0:
+                    violations.append({
+                        "invoice_id": inv_id,
+                        "rule": "Invalid Amount Check",
+                        "status": "FAIL",
+                        "reason": f"Invoice amount must be positive. Found ${val_amount:.2f} ({detected_curr})",
+                        "evidence": f"Amount = {val_amount} ({detected_curr})",
+                        "severity": "HIGH"
+                    })
+            else:
                 violations.append({
                     "invoice_id": inv_id,
-                    "rule": "Invalid Amount Check",
+                    "rule": "Non-numeric Amount Check",
                     "status": "FAIL",
-                    "reason": f"Invoice amount must be positive. Found ${val_amount:.2f}",
-                    "evidence": f"Amount = {val_amount}",
+                    "reason": "Invoice amount is non-numeric or unparseable",
+                    "evidence": f"Amount raw value: {amount}",
                     "severity": "HIGH"
                 })
-        except (ValueError, TypeError):
+        except Exception:
             violations.append({
                 "invoice_id": inv_id,
                 "rule": "Non-numeric Amount Check",
@@ -162,5 +174,33 @@ def evaluate_invoice_rules(invoice: Dict[str, Any], amount_limit: float = DEFAUL
                     "evidence": f"Date: {inv_date} ({dt_obj.strftime('%A')})",
                     "severity": "LOW"
                 })
+
+    # Rule 6: High-Risk & Sanctions Watchlist Screening
+    vendor_name = invoice.get("vendor_name")
+    if vendor_name:
+        from services.watchlist import screen_vendor
+        is_watched, match_info, sim_score = screen_vendor(vendor_name)
+        if is_watched and match_info:
+            violations.append({
+                "invoice_id": inv_id,
+                "rule": "Sanctions & High-Risk Entity Watchlist Screening",
+                "status": "FAIL",
+                "reason": f"Vendor '{vendor_name}' matches watched high-risk entity '{match_info['entity_name']}' ({sim_score}% similarity). Reason: {match_info['reason']}",
+                "evidence": f"Watchlist Category: {match_info['category']}, Risk Level: {match_info['risk_level']}, Similarity: {sim_score}%",
+                "severity": "HIGH"
+            })
+
+    # Rule 7: Round-Number Forensic Anomaly Check
+    if val_amount is not None and val_amount >= 1000.0:
+        non_itemized_cats = ["consulting", "advisory", "meals", "meals & entertainment", "travel", "travel & lodging", "services", "marketing"]
+        if cat in non_itemized_cats and (val_amount % 500 == 0):
+            violations.append({
+                "invoice_id": inv_id,
+                "rule": "Round-Number Forensic Anomaly Check",
+                "status": "REVIEW",
+                "reason": f"Invoice amount (${val_amount:,.2f}) in category '{invoice.get('category')}' is an exact round number without itemized cents, a common indicator of estimated or fabricated claims.",
+                "evidence": f"Amount: ${val_amount:,.2f} (multiple of $500), Category: '{invoice.get('category')}'",
+                "severity": "MEDIUM"
+            })
         
     return violations

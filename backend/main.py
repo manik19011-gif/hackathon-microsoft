@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Query, UploadFile, File
+from fastapi import FastAPI, HTTPException, Query, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -62,6 +62,15 @@ class BatchDecisionPayload(BaseModel):
     action: str  # "APPROVE", "REJECT", "ESCALATE"
     notes: Optional[str] = None
     user_name: Optional[str] = "Compliance Officer"
+
+class WatchlistPayload(BaseModel):
+    entity_name: str
+    reason: str
+    risk_level: Optional[str] = "HIGH"
+    category: Optional[str] = "Custom Watchlist"
+
+class AskAIPayload(BaseModel):
+    query: str
 
 class PolicyConfigPayload(BaseModel):
     amount_limit: float = 5000.0
@@ -733,6 +742,105 @@ def seed_scenario(scenario_id: str):
         "status": "success",
         "scenario": scenario_id,
         "records_loaded": len(records)
+    }
+
+@app.post("/parse-document")
+async def parse_document(file: Optional[UploadFile] = File(None), raw_text: Optional[str] = Form(None)):
+    """
+    Parses PDF document bytes or raw pasted invoice OCR text, extracts structured fields,
+    verifies mathematical line-item integrity (subtotal + tax = total), and infers categories.
+    """
+    from services.document_parser import extract_text_from_pdf_bytes, parse_invoice_text
+    
+    text_content = ""
+    if file:
+        content_bytes = await file.read()
+        filename = file.filename.lower()
+        if filename.endswith(".pdf"):
+            text_content = extract_text_from_pdf_bytes(content_bytes)
+        else:
+            text_content = content_bytes.decode("utf-8", errors="ignore")
+    elif raw_text:
+        text_content = raw_text
+        
+    if not text_content.strip():
+        raise HTTPException(status_code=400, detail="No document file or text content provided for parsing.")
+        
+    parsed = parse_invoice_text(text_content)
+    log_audit("Document Parsed", f"Parsed invoice '{parsed['invoice_id']}' for '{parsed['vendor_name']}' (${parsed['amount']}). Math verified: {parsed['math_verified']}.")
+    return parsed
+
+@app.get("/watchlist")
+def get_watchlist_api():
+    """
+    Returns active high-risk / sanctioned counterparty entities monitored by RapidFuzz.
+    """
+    from services.watchlist import get_watchlist
+    return {"watchlist": get_watchlist()}
+
+@app.post("/watchlist")
+def add_watchlist_api(payload: WatchlistPayload):
+    """
+    Adds a new high-risk or restricted counterparty to the active screening watchlist.
+    """
+    from services.watchlist import add_to_watchlist
+    item = add_to_watchlist(payload.entity_name, payload.reason, payload.risk_level or "HIGH", payload.category or "Custom Watchlist")
+    log_audit("Watchlist Updated", f"Added '{payload.entity_name}' to high-risk counterparty watchlist.")
+    return {"status": "success", "entity": item}
+
+@app.delete("/watchlist/{entity_name}")
+def delete_watchlist_api(entity_name: str):
+    """
+    Removes an entity from the active screening watchlist.
+    """
+    from services.watchlist import remove_from_watchlist
+    removed = remove_from_watchlist(entity_name)
+    if not removed:
+        raise HTTPException(status_code=404, detail="Entity not found on watchlist.")
+    log_audit("Watchlist Updated", f"Removed '{entity_name}' from high-risk watchlist.")
+    return {"status": "success", "message": f"Entity '{entity_name}' removed from watchlist."}
+
+@app.post("/ask-ai")
+def ask_compliance_copilot(payload: AskAIPayload):
+    """
+    Compliance AI Copilot: Answers natural language questions from auditors
+    grounded strictly in the live SQLite database state without hallucinations.
+    """
+    from services.ai_copilot import answer_compliance_query
+    return answer_compliance_query(payload.query)
+
+@app.get("/export-erp-json")
+def export_erp_json():
+    """
+    Exports audited invoices formatted for enterprise ERP ingestion (SAP S/4HANA & Oracle Cloud ERP).
+    """
+    import datetime
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM invoices")
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    
+    erp_records = []
+    for r in rows:
+        erp_records.append({
+            "erp_transaction_id": r["invoice_id"],
+            "supplier_name": r["vendor_name"],
+            "posting_date": r["invoice_date"],
+            "currency": "USD",
+            "net_amount": r["amount"],
+            "accounting_classification": r["category"],
+            "compliance_status": r["status"],
+            "audit_decision": r.get("decision_status", "PENDING"),
+            "risk_index": r.get("risk_score", 0),
+            "approval_ready": (r["status"] == "PASS" or r.get("decision_status") == "APPROVE")
+        })
+        
+    return {
+        "erp_system": "Standard Financial Gateway (SAP S/4HANA & Oracle Cloud Ready)",
+        "exported_at": datetime.datetime.now().isoformat(),
+        "total_records": len(erp_records),
+        "records": erp_records
     }
 
 if __name__ == "__main__":

@@ -210,6 +210,73 @@ def test_seed_scenario_api():
     assert res.json()["scenario"] == "procurement-fraud"
     assert res.json()["records_loaded"] == 4
 
+def test_currency_normalization():
+    from services.currency import detect_and_normalize_currency
+    usd, curr, orig = detect_and_normalize_currency("€1,000.00")
+    assert curr == "EUR"
+    assert orig == 1000.0
+    assert usd == 1080.0
+
+def test_watchlist_screening():
+    from services.watchlist import screen_vendor
+    matched, info, score = screen_vendor("Apex Shell Holdings Inc")
+    assert matched is True
+    assert score >= 80.0
+    assert "Apex Shell" in info["entity_name"]
+    
+    matched2, _, _ = screen_vendor("Legitimate Office Supplies Co")
+    assert matched2 is False
+
+def test_round_number_forensic_rule():
+    inv = {
+        "invoice_id": "INV-RND-1",
+        "vendor_name": "Consulting Group",
+        "invoice_date": "2026-10-01",
+        "amount": 5000.0,
+        "category": "Consulting"
+    }
+    violations = evaluate_invoice_rules(inv, amount_limit=10000.0)
+    assert any(v["rule"] == "Round-Number Forensic Anomaly Check" for v in violations)
+
+def test_document_parser_text():
+    from services.document_parser import parse_invoice_text
+    sample_text = """
+    Acme Enterprise Cloud Inc
+    Invoice #: INV-98765
+    Date: 2026-10-01
+    Subtotal: $1,200.00
+    Tax: $120.00
+    Total Amount: $1,320.00
+    Description: Cloud virtual machine hosting
+    """
+    parsed = parse_invoice_text(sample_text)
+    assert parsed["invoice_id"] == "INV-98765"
+    assert parsed["amount"] == 1320.0
+    assert parsed["math_verified"] is True
+    assert parsed["category"] == "Cloud Infrastructure"
+
+def test_ai_copilot_query():
+    from fastapi.testclient import TestClient
+    from backend.main import app
+    client = TestClient(app)
+    
+    res = client.post("/ask-ai", json={"query": "Who is the riskiest vendor and why?"})
+    assert res.status_code == 200
+    data = res.json()
+    assert "answer" in data
+    assert len(data["answer"]) > 10
+
+def test_export_erp_json():
+    from fastapi.testclient import TestClient
+    from backend.main import app
+    client = TestClient(app)
+    
+    res = client.get("/export-erp-json")
+    assert res.status_code == 200
+    data = res.json()
+    assert "erp_system" in data
+    assert "records" in data
+
 
 
 

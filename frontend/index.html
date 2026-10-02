@@ -25,7 +25,7 @@
 
     @media print {
       body { background: white !important; color: black !important; }
-      header, footer, nav, #toast, #batchBar, .no-print { display: none !important; }
+      header, footer, nav, #toast, #batchBar, #aiCopilotDrawer, #aiCopilotToggle, .no-print { display: none !important; }
       #reportModal { display: block !important; position: static !important; background: white !important; color: black !important; padding: 0 !important; width: 100% !important; max-width: 100% !important; border: none !important; box-shadow: none !important; }
       #reportContent { background: white !important; color: black !important; border: none !important; }
       .print-border { border: 1px solid #cbd5e1 !important; }
@@ -33,7 +33,7 @@
     }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white relative">
 
   <!-- Toast Notification -->
   <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 border border-slate-700 text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-2xl hidden z-50 flex items-center space-x-3 transition-all duration-300">
@@ -59,57 +59,61 @@
           </div>
           <p class="text-[11px] text-slate-400 flex items-center space-x-1.5 mt-0.5">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>API Online • SQLite Ready • RapidFuzz & Benford Active</span>
+            <span>v2.5 • RapidFuzz • Benford • Watchlists • OCR Active</span>
           </p>
         </div>
       </div>
 
       <!-- Navigation Tabs -->
-      <nav class="hidden lg:flex items-center space-x-1 bg-slate-900/80 p-1.5 rounded-xl border border-slate-800/80 text-xs font-semibold">
-        <button onclick="switchMainView('landingView')" id="navLanding" class="px-3.5 py-1.5 rounded-lg text-indigo-400 bg-indigo-500/10 transition">Overview</button>
-        <button onclick="switchMainView('studioView')" id="navStudio" class="px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition">Audit Studio</button>
-        <button onclick="switchMainView('checkerView')" id="navChecker" class="px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center space-x-1">
+      <nav class="hidden xl:flex items-center space-x-1 bg-slate-900/80 p-1.5 rounded-xl border border-slate-800/80 text-xs font-semibold">
+        <button onclick="switchMainView('landingView')" id="navLanding" class="px-3 py-1.5 rounded-lg text-indigo-400 bg-indigo-500/10 transition">Overview</button>
+        <button onclick="switchMainView('studioView')" id="navStudio" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition">Audit Studio</button>
+        <button onclick="switchMainView('checkerView')" id="navChecker" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center space-x-1">
           <i data-lucide="scan" class="w-3.5 h-3.5 text-indigo-400"></i>
           <span>Pre-Pay Validator</span>
         </button>
-        <button onclick="switchMainView('fraudView')" id="navFraud" class="px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition">Fraud Lab</button>
-        <button onclick="switchMainView('vendorView')" id="navVendor" class="px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition">Vendor Risk</button>
-        <button onclick="switchMainView('auditView')" id="navAudit" class="px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition">SOX Audit Logs</button>
-        <a href="/docs" target="_blank" class="px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center space-x-1">
+        <button onclick="switchMainView('parserView')" id="navParser" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center space-x-1">
+          <i data-lucide="file-search" class="w-3.5 h-3.5 text-purple-400"></i>
+          <span>Document OCR</span>
+        </button>
+        <button onclick="switchMainView('fraudView')" id="navFraud" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition">Fraud Lab</button>
+        <button onclick="switchMainView('vendorView')" id="navVendor" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition">Vendor Risk & Sanctions</button>
+        <button onclick="switchMainView('auditView')" id="navAudit" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition">SOX Audit Logs</button>
+        <a href="/docs" target="_blank" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center space-x-1">
           <span>API Docs</span>
           <i data-lucide="external-link" class="w-3 h-3"></i>
         </a>
       </nav>
 
       <!-- Quick Action Controls -->
-      <div class="flex items-center space-x-2.5">
+      <div class="flex items-center space-x-2">
         <!-- Scenario Preset Dropdown -->
         <div class="relative hidden sm:block">
-          <select id="scenarioSelector" onchange="loadScenario(this.value)" class="bg-slate-900 border border-slate-700 hover:border-indigo-500 text-xs font-semibold text-slate-200 px-3 py-2 rounded-lg cursor-pointer focus:outline-none">
-            <option value="enterprise-mixed">Scenario: Enterprise Mixed</option>
-            <option value="procurement-fraud">Scenario: Procurement Fraud Ring</option>
-            <option value="clean-operations">Scenario: Clean Operations</option>
+          <select id="scenarioSelector" onchange="loadScenario(this.value)" class="bg-slate-900 border border-slate-700 hover:border-indigo-500 text-xs font-semibold text-slate-200 px-2.5 py-2 rounded-lg cursor-pointer focus:outline-none">
+            <option value="enterprise-mixed">Scenario: Mixed</option>
+            <option value="procurement-fraud">Scenario: Fraud Ring</option>
+            <option value="clean-operations">Scenario: Clean Ops</option>
           </select>
         </div>
 
-        <button onclick="openPolicyModal()" class="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-700 transition" title="Configure dynamic compliance policy rules">
+        <button onclick="openPolicyModal()" class="flex items-center space-x-1 bg-slate-900 hover:bg-slate-800 text-slate-200 text-xs font-semibold px-2.5 py-2 rounded-lg border border-slate-700 transition" title="Policy Rules">
           <i data-lucide="sliders" class="w-3.5 h-3.5 text-indigo-400"></i>
-          <span class="hidden sm:inline">Policy Rules</span>
+          <span class="hidden md:inline">Policy</span>
         </button>
 
-        <button onclick="openReportModal()" class="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-700 transition" title="Print Executive Audit Brief">
+        <button onclick="openReportModal()" class="flex items-center space-x-1 bg-slate-900 hover:bg-slate-800 text-slate-200 text-xs font-semibold px-2.5 py-2 rounded-lg border border-slate-700 transition" title="Executive Report">
           <i data-lucide="printer" class="w-3.5 h-3.5 text-purple-400"></i>
-          <span class="hidden sm:inline">Executive Brief</span>
+          <span class="hidden md:inline">Report</span>
         </button>
 
-        <a href="/sample-csv" class="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-700 transition" title="Download enterprise sample dataset with clean + anomaly records">
-          <i data-lucide="file-down" class="w-3.5 h-3.5 text-indigo-400"></i>
-          <span class="hidden sm:inline">Sample CSV</span>
+        <a href="/export-erp-json" target="_blank" class="hidden sm:flex items-center space-x-1 bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-semibold px-2.5 py-2 rounded-lg border border-slate-700 transition" title="Export SAP / Oracle ERP Payload">
+          <i data-lucide="database" class="w-3.5 h-3.5 text-emerald-400"></i>
+          <span>ERP JSON</span>
         </a>
 
-        <button onclick="seedDemoAndOpenStudio()" class="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3.5 py-2 rounded-lg shadow-lg shadow-emerald-600/25 transition">
+        <button onclick="seedDemoAndOpenStudio()" class="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-2 rounded-lg shadow-lg shadow-emerald-600/25 transition">
           <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
-          <span>Instant Demo</span>
+          <span>Demo</span>
         </button>
       </div>
 
@@ -127,7 +131,7 @@
         
         <div class="inline-flex items-center space-x-2 bg-indigo-500/10 border border-indigo-500/20 px-4 py-1.5 rounded-full text-xs font-semibold text-indigo-300">
           <span class="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span>Enterprise AI Financial Compliance & Anti-Fraud Engine</span>
+          <span>Enterprise AI Financial Compliance & Anti-Fraud Suite</span>
         </div>
 
         <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight max-w-5xl mx-auto leading-tight">
@@ -135,7 +139,7 @@
         </h1>
 
         <p class="text-lg sm:text-xl text-slate-400 max-w-3xl mx-auto leading-relaxed">
-          Powered by <strong>Benford's Law statistical screening</strong>, <strong>RapidFuzz fuzzy duplicate matching</strong>, <strong>split-transaction structuring detection</strong>, and <strong>Azure OpenAI evidence-based audit explanations</strong>.
+          Grounded forensic intelligence featuring <strong>Benford's Law statistical screening</strong>, <strong>RapidFuzz duplicate matching</strong>, <strong>split structuring detection</strong>, <strong>sanctions watchlist screening</strong>, and <strong>PDF/receipt document parsing</strong>.
         </p>
 
         <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
@@ -145,12 +149,12 @@
           </button>
           <button onclick="switchMainView('checkerView')" class="w-full sm:w-auto flex items-center justify-center space-x-2 text-sm font-bold bg-slate-900 hover:bg-slate-800 text-slate-200 px-8 py-4 rounded-xl border border-slate-700 transition">
             <i data-lucide="scan" class="w-5 h-5 text-indigo-400"></i>
-            <span>Try Pre-Payment Validator</span>
+            <span>Pre-Payment Validator</span>
           </button>
-          <a href="/sample-csv" class="w-full sm:w-auto flex items-center justify-center space-x-2 text-sm font-bold bg-slate-900/60 hover:bg-slate-800 text-slate-300 px-6 py-4 rounded-xl border border-slate-800 transition">
-            <i data-lucide="download" class="w-5 h-5 text-emerald-400"></i>
-            <span>Sample CSV</span>
-          </a>
+          <button onclick="switchMainView('parserView')" class="w-full sm:w-auto flex items-center justify-center space-x-2 text-sm font-bold bg-slate-900/80 hover:bg-slate-800 text-purple-300 px-6 py-4 rounded-xl border border-purple-500/30 transition">
+            <i data-lucide="file-text" class="w-5 h-5 text-purple-400"></i>
+            <span>OCR Document Parser</span>
+          </button>
         </div>
 
         <!-- Live Metrics Bar -->
@@ -168,8 +172,8 @@
             <span>Benford Statistical Screening</span>
           </div>
           <div class="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800/80 flex items-center space-x-2.5 justify-center">
-            <i data-lucide="cpu" class="w-4 h-4 text-indigo-400"></i>
-            <span>Azure OpenAI Audit Reasoning</span>
+            <i data-lucide="shield-alert" class="w-4 h-4 text-red-400"></i>
+            <span>Sanctions Watchlist Screening</span>
           </div>
         </div>
 
@@ -186,38 +190,38 @@
       <div class="grid grid-cols-1 md:grid-cols-6 gap-3 text-xs">
         <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-2 text-center hover:border-indigo-500/50 transition">
           <div class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 mx-auto flex items-center justify-center font-bold font-mono">1</div>
-          <h4 class="font-bold text-white">Ingestion & Loader</h4>
-          <p class="text-[11px] text-slate-400">CSV, Excel, or Kaggle files loaded & validated.</p>
+          <h4 class="font-bold text-white">Ingestion & OCR</h4>
+          <p class="text-[11px] text-slate-400">CSV, Excel, PDF documents, or raw text loaded.</p>
         </div>
 
         <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-2 text-center hover:border-indigo-500/50 transition">
           <div class="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 mx-auto flex items-center justify-center font-bold font-mono">2</div>
-          <h4 class="font-bold text-white">Schema Normalizer</h4>
-          <p class="text-[11px] text-slate-400">Fuzzy column alias mapper unifies target schema.</p>
+          <h4 class="font-bold text-white">Currency & Math</h4>
+          <p class="text-[11px] text-slate-400">Multi-currency FX normalization & tax balance checks.</p>
         </div>
 
         <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-2 text-center hover:border-indigo-500/50 transition">
           <div class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 mx-auto flex items-center justify-center font-bold font-mono">3</div>
           <h4 class="font-bold text-white">Rule Engine</h4>
-          <p class="text-[11px] text-slate-400">Required fields, limits, weekend dates & categories.</p>
+          <p class="text-[11px] text-slate-400">Limits, categories, weekends & round-number checks.</p>
         </div>
 
         <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-2 text-center hover:border-indigo-500/50 transition">
-          <div class="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 mx-auto flex items-center justify-center font-bold font-mono">4</div>
-          <h4 class="font-bold text-white">RapidFuzz & Splits</h4>
-          <p class="text-[11px] text-slate-400">Catches exact/fuzzy duplicate vendors & split invoices.</p>
+          <div class="w-8 h-8 rounded-lg bg-red-500/10 text-red-400 mx-auto flex items-center justify-center font-bold font-mono">4</div>
+          <h4 class="font-bold text-white">Sanctions & Watchlist</h4>
+          <p class="text-[11px] text-slate-400">Screens vendors against OFAC & shell blacklists.</p>
         </div>
 
         <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-2 text-center hover:border-indigo-500/50 transition">
-          <div class="w-8 h-8 rounded-lg bg-pink-500/10 text-pink-400 mx-auto flex items-center justify-center font-bold font-mono">5</div>
-          <h4 class="font-bold text-white">Benford Screening</h4>
-          <p class="text-[11px] text-slate-400">Evaluates statistical first-digit distribution anomalies.</p>
+          <div class="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 mx-auto flex items-center justify-center font-bold font-mono">5</div>
+          <h4 class="font-bold text-white">RapidFuzz & Benford</h4>
+          <p class="text-[11px] text-slate-400">Catches fuzzy duplicates, splits & digit anomalies.</p>
         </div>
 
         <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-2 text-center hover:border-indigo-500/50 transition">
           <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 mx-auto flex items-center justify-center font-bold font-mono">6</div>
-          <h4 class="font-bold text-white">AI Audit Decision</h4>
-          <p class="text-[11px] text-slate-400">Azure OpenAI generates factual evidence explanations.</p>
+          <h4 class="font-bold text-white">AI Copilot & Audit</h4>
+          <p class="text-[11px] text-slate-400">Grounded natural language answers & SOX logs.</p>
         </div>
       </div>
     </div>
@@ -259,22 +263,22 @@
               <td class="py-3.5 px-6 font-bold text-emerald-400 bg-indigo-950/20">Rolling temporal window clustering</td>
             </tr>
             <tr>
-              <td class="py-3.5 px-6 font-semibold">Forensic Statistical Screening</td>
-              <td class="py-3.5 px-6 text-slate-400">Never performed</td>
+              <td class="py-3.5 px-6 font-semibold">Sanctions & High-Risk Entity Watchlists</td>
+              <td class="py-3.5 px-6 text-slate-400">Manual compliance lookup</td>
+              <td class="py-3.5 px-6 text-slate-400">Requires expensive third-party plug-in</td>
+              <td class="py-3.5 px-6 font-bold text-emerald-400 bg-indigo-950/20">Built-in fuzzy watchlist screening</td>
+            </tr>
+            <tr>
+              <td class="py-3.5 px-6 font-semibold">Round-Number Embezzlement Check</td>
+              <td class="py-3.5 px-6 text-slate-400">Rarely checked</td>
               <td class="py-3.5 px-6 text-slate-400">Not supported</td>
-              <td class="py-3.5 px-6 font-bold text-emerald-400 bg-indigo-950/20">Benford's Law First-Digit MAD Analysis</td>
+              <td class="py-3.5 px-6 font-bold text-emerald-400 bg-indigo-950/20">Forensic round-multiple anomaly screening</td>
             </tr>
             <tr>
-              <td class="py-3.5 px-6 font-semibold">Audit Justification & Explanations</td>
-              <td class="py-3.5 px-6 text-slate-400">Manual clerk typing</td>
-              <td class="py-3.5 px-6 text-slate-400">Cryptic numeric error codes</td>
-              <td class="py-3.5 px-6 font-bold text-emerald-400 bg-indigo-950/20">Azure OpenAI grounded in factual evidence</td>
-            </tr>
-            <tr>
-              <td class="py-3.5 px-6 font-semibold">Pre-Payment Single Invoice Verification</td>
-              <td class="py-3.5 px-6 text-slate-400">Slow email back-and-forth</td>
-              <td class="py-3.5 px-6 text-slate-400">Post-batch overnight reports</td>
-              <td class="py-3.5 px-6 font-bold text-emerald-400 bg-indigo-950/20">Instant sub-15ms pre-payment scanner</td>
+              <td class="py-3.5 px-6 font-semibold">Natural Language Audit Copilot</td>
+              <td class="py-3.5 px-6 text-slate-400">Not available</td>
+              <td class="py-3.5 px-6 text-slate-400">SQL reports only</td>
+              <td class="py-3.5 px-6 font-bold text-emerald-400 bg-indigo-950/20">Grounded Compliance AI Assistant</td>
             </tr>
           </tbody>
         </table>
@@ -321,56 +325,6 @@
             </p>
           </div>
         </div>
-      </div>
-    </div>
-
-    <!-- FAQ Accordion -->
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
-      <div class="text-center space-y-2 mb-6">
-        <h3 class="text-xs font-bold uppercase tracking-widest text-indigo-400">Frequently Asked Questions</h3>
-        <h4 class="text-2xl font-bold text-white">Compliance & Technical Architecture</h4>
-      </div>
-
-      <div class="space-y-3 text-xs">
-        <details class="bg-slate-900 border border-slate-800 p-4 rounded-xl cursor-pointer group">
-          <summary class="font-bold text-slate-200 flex justify-between items-center">
-            <span>How does Azure OpenAI avoid hallucinations and false allegations?</span>
-            <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 group-open:rotate-180 transition"></i>
-          </summary>
-          <p class="text-slate-400 mt-2 leading-relaxed">
-            Azure OpenAI is strictly bound to factual evidence generated by deterministic Python engines (exact line numbers, RapidFuzz similarity percentages, dates, and amounts). The LLM is never permitted to invent violations, extrapolate unprovided figures, or speculate outside the verified database state.
-          </p>
-        </details>
-
-        <details class="bg-slate-900 border border-slate-800 p-4 rounded-xl cursor-pointer group">
-          <summary class="font-bold text-slate-200 flex justify-between items-center">
-            <span>Why is RapidFuzz used instead of simple string matching?</span>
-            <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 group-open:rotate-180 transition"></i>
-          </summary>
-          <p class="text-slate-400 mt-2 leading-relaxed">
-            Fraudulent and accidental duplicate invoices frequently alter subtle typographical elements (e.g. "Staples Inc" vs "STAPLES INCORPORATED" or "Dell Solutions LLC" vs "Dell Solutions"). RapidFuzz computes normalized token sort and token set ratios to catch deliberate punctuation or ordering shifts without generating false positives.
-          </p>
-        </details>
-
-        <details class="bg-slate-900 border border-slate-800 p-4 rounded-xl cursor-pointer group">
-          <summary class="font-bold text-slate-200 flex justify-between items-center">
-            <span>How does Benford's Law spot fabricated numbers?</span>
-            <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 group-open:rotate-180 transition"></i>
-          </summary>
-          <p class="text-slate-400 mt-2 leading-relaxed">
-            In naturally occurring financial accounting distributions, the first digit '1' appears approximately 30.1% of the time, whereas '9' appears only 4.6% of the time. When bad actors invent fake receipts or inflate invoices, they disproportionately invent numbers starting with 4, 5, 7, or 9, producing high Mean Absolute Deviation (MAD) scores.
-          </p>
-        </details>
-
-        <details class="bg-slate-900 border border-slate-800 p-4 rounded-xl cursor-pointer group">
-          <summary class="font-bold text-slate-200 flex justify-between items-center">
-            <span>Is the audit trail compliant with SOX 404 requirements?</span>
-            <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 group-open:rotate-180 transition"></i>
-          </summary>
-          <p class="text-slate-400 mt-2 leading-relaxed">
-            Yes. Every automated policy evaluation, single invoice check, file import, policy configuration change, and human auditor decision (Approve, Reject, Escalate) is permanently recorded with an immutable ISO 8601 timestamp and auditor identification in SQLite and exportable via CSV.
-          </p>
-        </details>
       </div>
     </div>
 
@@ -470,7 +424,7 @@
     <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-4">
       <div class="flex items-center space-x-2 flex-1 min-w-[260px]">
         <i data-lucide="search" class="w-4 h-4 text-slate-400"></i>
-        <input type="text" id="searchInput" oninput="onSearchChange()" placeholder="Search by Invoice ID, Vendor, or Description (Press Ctrl+K to search)..." class="w-full bg-slate-950 border border-slate-800 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500">
+        <input type="text" id="searchInput" oninput="onSearchChange()" placeholder="Search by Invoice ID, Vendor, or Description (Ctrl+K to search)..." class="w-full bg-slate-950 border border-slate-800 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500">
       </div>
 
       <div class="flex items-center space-x-4 text-xs">
@@ -593,7 +547,7 @@
           <i data-lucide="scan" class="w-6 h-6 text-indigo-400"></i>
           <span>Pre-Payment Single Invoice Validator</span>
         </h2>
-        <p class="text-xs text-slate-400 mt-1">Instant compliance validation before scheduling payment — checks rules, RapidFuzz duplicates, and split patterns across the entire ledger.</p>
+        <p class="text-xs text-slate-400 mt-1">Instant compliance validation before scheduling payment — checks rules, RapidFuzz duplicates, sanctions, and split patterns.</p>
       </div>
       <span class="px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Sub-15ms Live Validation</span>
     </div>
@@ -603,6 +557,7 @@
       <span class="text-slate-400 font-medium">Quick Demo Scenarios:</span>
       <div class="flex flex-wrap gap-2">
         <button onclick="fillCheckerPreset('fuzzy-dup')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition">Test Fuzzy Duplicate</button>
+        <button onclick="fillCheckerPreset('sanctions')" class="bg-slate-800 hover:bg-slate-700 text-red-300 px-3 py-1.5 rounded-lg border border-red-500/30 transition">Test Sanctioned Vendor</button>
         <button onclick="fillCheckerPreset('over-limit')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition">Test Category Limit</button>
         <button onclick="fillCheckerPreset('split')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition">Test Split Structuring</button>
         <button onclick="fillCheckerPreset('clean')" class="bg-slate-800 hover:bg-slate-700 text-emerald-400 px-3 py-1.5 rounded-lg border border-emerald-500/30 transition">Test Clean Invoice</button>
@@ -623,8 +578,8 @@
             <input type="text" id="chkInvId" placeholder="INV-2026-99" class="w-full bg-slate-950 border border-slate-800 text-white rounded-lg p-2.5 focus:outline-none focus:border-indigo-500">
           </div>
           <div>
-            <label class="text-slate-400 font-semibold block mb-1">Total Amount ($)</label>
-            <input type="number" step="0.01" id="chkAmount" placeholder="420.50" class="w-full bg-slate-950 border border-slate-800 text-white rounded-lg p-2.5 focus:outline-none focus:border-indigo-500">
+            <label class="text-slate-400 font-semibold block mb-1">Total Amount ($ or € / £)</label>
+            <input type="text" id="chkAmount" placeholder="420.50 or €1,200" class="w-full bg-slate-950 border border-slate-800 text-white rounded-lg p-2.5 focus:outline-none focus:border-indigo-500">
           </div>
         </div>
 
@@ -717,7 +672,7 @@
         </div>
 
         <div class="text-[11px] text-slate-500 border-t border-slate-800 pt-3 flex items-center justify-between">
-          <span>Engine: RapidFuzz + Benford + Dynamic Policies</span>
+          <span>Engine: RapidFuzz + Benford + Sanctions Watchlist</span>
           <span>Security: SOX Section 404 Compliant</span>
         </div>
       </div>
@@ -725,7 +680,95 @@
   </section>
 
   <!-- ========================================== -->
-  <!-- VIEW 4: FRAUD LAB (BENFORD & SPLITS)       -->
+  <!-- VIEW 4: DOCUMENT OCR & PDF PARSER          -->
+  <!-- ========================================== -->
+  <section id="parserView" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div class="border-b border-slate-800 pb-4 flex items-center justify-between">
+      <div>
+        <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+          <i data-lucide="file-search" class="w-6 h-6 text-purple-400"></i>
+          <span>Invoice Document & OCR Text Parser</span>
+        </h2>
+        <p class="text-xs text-slate-400 mt-1">Upload PDF invoices or paste raw receipt OCR text to automatically extract fields, verify line-item math balance, and route to compliance.</p>
+      </div>
+      <div class="flex items-center space-x-2">
+        <button onclick="fillSampleDoc('cloud')" class="text-xs bg-slate-900 hover:bg-slate-800 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 transition">Sample: Cloud Invoice</button>
+        <button onclick="fillSampleDoc('math-err')" class="text-xs bg-slate-900 hover:bg-slate-800 text-red-400 px-3 py-1.5 rounded-lg border border-red-500/30 transition">Sample: Tax Discrepancy</button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <!-- Document Input -->
+      <div class="lg:col-span-6 bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-4">
+        <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center space-x-2">
+          <i data-lucide="file-up" class="w-4 h-4 text-purple-400"></i>
+          <span>Document Ingestion</span>
+        </h3>
+
+        <!-- File Upload Box -->
+        <div class="border-2 border-dashed border-slate-700 hover:border-purple-500 rounded-xl p-6 text-center transition cursor-pointer bg-slate-950/60" onclick="document.getElementById('docFileInput').click()">
+          <input type="file" id="docFileInput" class="hidden" accept=".pdf, .txt" onchange="handleDocFileUpload(this.files[0])">
+          <i data-lucide="file-text" class="w-8 h-8 text-purple-400 mx-auto mb-2"></i>
+          <p class="text-xs font-semibold text-slate-200">Upload PDF Invoice or Text Receipt</p>
+          <p class="text-[10px] text-slate-500 mt-0.5">Supports PDF documents with pypdf text extraction</p>
+        </div>
+
+        <div class="relative flex py-1 items-center">
+          <div class="flex-grow border-t border-slate-800"></div>
+          <span class="flex-shrink mx-4 text-[10px] uppercase font-bold text-slate-500">Or Paste OCR Raw Text</span>
+          <div class="flex-grow border-t border-slate-800"></div>
+        </div>
+
+        <textarea id="rawDocText" rows="7" class="w-full bg-slate-950 border border-slate-800 text-xs font-mono text-white rounded-lg p-3 focus:outline-none focus:border-purple-500" placeholder="Paste invoice text from scanner or email..."></textarea>
+
+        <button onclick="parseDocumentText()" class="w-full bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold py-3 rounded-xl shadow-lg shadow-purple-600/30 transition flex items-center justify-center space-x-2">
+          <i data-lucide="scan-line" class="w-4 h-4"></i>
+          <span>Extract Invoice & Reconcile Math</span>
+        </button>
+      </div>
+
+      <!-- Extraction & Math Reconciliation Results -->
+      <div class="lg:col-span-6 bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-6 flex flex-col justify-between">
+        <div class="space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center space-x-2">
+              <i data-lucide="check-check" class="w-4 h-4 text-emerald-400"></i>
+              <span>Parsed Structured Output</span>
+            </h3>
+            <span id="docMathStatus" class="px-2.5 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400">Awaiting Extraction</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 text-xs bg-slate-950 p-4 rounded-xl border border-slate-800">
+            <div><span class="text-slate-400">Invoice ID:</span> <span id="docOutId" class="font-mono font-semibold text-slate-200">--</span></div>
+            <div><span class="text-slate-400">Total Amount:</span> <span id="docOutAmount" class="font-semibold text-emerald-400">--</span></div>
+            <div><span class="text-slate-400">Vendor:</span> <span id="docOutVendor" class="font-semibold text-slate-200">--</span></div>
+            <div><span class="text-slate-400">Date:</span> <span id="docOutDate" class="text-slate-300">--</span></div>
+            <div><span class="text-slate-400">Inferred Category:</span> <span id="docOutCat" class="text-indigo-400 font-semibold">--</span></div>
+            <div><span class="text-slate-400">Currency:</span> <span id="docOutCurr" class="text-slate-300 font-bold">USD</span></div>
+          </div>
+
+          <!-- Mathematical Balance Box -->
+          <div id="docMathBox" class="p-4 rounded-xl border border-slate-800 bg-slate-950 text-xs space-y-1.5">
+            <div class="flex justify-between font-bold text-slate-300">
+              <span>Mathematical Line-Item Reconciliation</span>
+              <span id="docMathResultBadge" class="text-[10px] text-slate-400">Not Evaluated</span>
+            </div>
+            <p id="docMathDetails" class="text-slate-400 text-[11px] leading-relaxed">Line items and sales tax will be verified against total amount.</p>
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-800 flex items-center space-x-3">
+          <button onclick="sendParsedToValidator()" id="btnSendToValidator" disabled class="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold py-2.5 rounded-lg transition flex items-center justify-center space-x-1.5 shadow-md">
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            <span>Load in Pre-Payment Validator</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- VIEW 5: FRAUD LAB (BENFORD & SPLITS)       -->
   <!-- ========================================== -->
   <section id="fraudView" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
     <div class="flex items-center justify-between border-b border-slate-800 pb-4">
@@ -778,18 +821,76 @@
   </section>
 
   <!-- ========================================== -->
-  <!-- VIEW 5: VENDOR RISK INTELLIGENCE           -->
+  <!-- VIEW 6: VENDOR RISK & SANCTIONS WATCHLIST  -->
   <!-- ========================================== -->
   <section id="vendorView" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
     <div class="border-b border-slate-800 pb-4">
       <h2 class="text-xl font-bold text-white flex items-center space-x-2">
         <i data-lucide="building" class="w-6 h-6 text-indigo-400"></i>
-        <span>Vendor Risk & Procurement Intelligence</span>
+        <span>Vendor Risk Intelligence & Counterparty Screening</span>
       </h2>
-      <p class="text-xs text-slate-400 mt-1">Aggregated vendor risk ranking, violation frequency, and cumulative spend metrics</p>
+      <p class="text-xs text-slate-400 mt-1">Aggregated vendor risk ranking, violation frequency, and active sanctions watchlist</p>
     </div>
 
+    <!-- Sanctions Watchlist Management Card -->
+    <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="text-sm font-bold text-white flex items-center space-x-2">
+            <i data-lucide="shield-alert" class="w-4 h-4 text-red-400"></i>
+            <span>Sanctions & High-Risk Counterparty Watchlist</span>
+          </h3>
+          <p class="text-xs text-slate-400 mt-0.5">RapidFuzz screens all invoice vendors against this list with an 80% similarity threshold</p>
+        </div>
+        <button onclick="document.getElementById('addWatchlistForm').classList.toggle('hidden')" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-3 py-1.5 rounded-lg transition flex items-center space-x-1">
+          <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+          <span>Add Restricted Entity</span>
+        </button>
+      </div>
+
+      <!-- Add Watchlist Form -->
+      <div id="addWatchlistForm" class="hidden bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs space-y-3">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <input type="text" id="watchName" placeholder="Entity / Vendor Name (e.g. Apex Shell Corp)" class="bg-slate-900 border border-slate-700 text-white rounded-lg p-2 focus:outline-none focus:border-indigo-500">
+          <input type="text" id="watchReason" placeholder="Flag Reason (e.g. Unverified Shell Co)" class="bg-slate-900 border border-slate-700 text-white rounded-lg p-2 focus:outline-none focus:border-indigo-500">
+          <select id="watchRisk" class="bg-slate-900 border border-slate-700 text-white rounded-lg p-2 focus:outline-none focus:border-indigo-500">
+            <option value="CRITICAL">Risk: CRITICAL</option>
+            <option value="HIGH">Risk: HIGH</option>
+            <option value="MEDIUM">Risk: MEDIUM</option>
+          </select>
+        </div>
+        <div class="flex justify-end space-x-2">
+          <button onclick="document.getElementById('addWatchlistForm').classList.add('hidden')" class="px-3 py-1 text-slate-400 hover:text-white">Cancel</button>
+          <button onclick="submitNewWatchlistEntity()" class="bg-red-600 hover:bg-red-500 text-white font-bold px-3 py-1 rounded-lg">Add to Watchlist</button>
+        </div>
+      </div>
+
+      <!-- Watchlist Table -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs text-slate-300">
+          <thead class="bg-slate-950 text-slate-400 font-semibold uppercase text-[10px] border-b border-slate-800">
+            <tr>
+              <th class="py-2.5 px-4">Entity Name</th>
+              <th class="py-2.5 px-4">Category</th>
+              <th class="py-2.5 px-4">Flag Reason</th>
+              <th class="py-2.5 px-4">Risk Level</th>
+              <th class="py-2.5 px-4 text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody id="watchlistTableBody" class="divide-y divide-slate-800/80 bg-slate-950/40">
+            <tr>
+              <td colspan="5" class="py-4 text-center text-slate-500">Loading watchlist...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Vendor Spend & Violations Table -->
     <div class="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
+      <div class="p-4 border-b border-slate-800">
+        <h3 class="text-sm font-bold text-white">Aggregated Vendor Risk Rankings</h3>
+      </div>
       <div class="overflow-x-auto">
         <table class="w-full text-left text-xs text-slate-300">
           <thead class="bg-slate-950/70 text-slate-400 font-semibold uppercase tracking-wider text-[11px] border-b border-slate-800">
@@ -813,7 +914,7 @@
   </section>
 
   <!-- ========================================== -->
-  <!-- VIEW 6: SOX AUDIT LOGS & PROFILER          -->
+  <!-- VIEW 7: SOX AUDIT LOGS & PROFILER          -->
   <!-- ========================================== -->
   <section id="auditView" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
     <div class="border-b border-slate-800 pb-4 flex items-center justify-between">
@@ -824,10 +925,16 @@
         </h2>
         <p class="text-xs text-slate-400 mt-1">Immutable record of automated engine executions and human auditor decisions</p>
       </div>
-      <a href="/export-exceptions-csv" target="_blank" class="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-4 py-2 rounded-lg border border-slate-700 transition">
-        <i data-lucide="download" class="w-4 h-4"></i>
-        <span>Download Full Audit CSV</span>
-      </a>
+      <div class="flex items-center space-x-2">
+        <a href="/export-erp-json" target="_blank" class="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-700 transition">
+          <i data-lucide="file-code" class="w-4 h-4"></i>
+          <span>ERP JSON</span>
+        </a>
+        <a href="/export-exceptions-csv" target="_blank" class="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-4 py-2 rounded-lg border border-slate-700 transition">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          <span>Export CSV</span>
+        </a>
+      </div>
     </div>
 
     <!-- Data Profiler Summary Cards -->
@@ -871,6 +978,57 @@
       </div>
     </div>
   </section>
+
+  <!-- ========================================== -->
+  <!-- FLOATING ASK COMPLIANCE AI COPILOT BUTTON  -->
+  <!-- ========================================== -->
+  <button id="aiCopilotToggle" onclick="toggleAICopilot()" class="fixed bottom-6 right-6 z-40 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white p-3.5 rounded-full shadow-2xl flex items-center space-x-2 transition transform hover:scale-105 border border-indigo-400/30">
+    <i data-lucide="bot" class="w-5 h-5"></i>
+    <span class="text-xs font-bold hidden sm:inline">Ask Compliance AI</span>
+  </button>
+
+  <!-- ========================================== -->
+  <!-- COMPLIANCE AI COPILOT DRAWER               -->
+  <!-- ========================================== -->
+  <div id="aiCopilotDrawer" class="fixed bottom-20 right-6 w-96 max-w-[90vw] bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl hidden z-50 flex flex-col max-h-[550px] overflow-hidden">
+    <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/70">
+      <div class="flex items-center space-x-2">
+        <div class="p-1.5 bg-purple-500/20 text-purple-400 rounded-lg">
+          <i data-lucide="sparkles" class="w-4 h-4"></i>
+        </div>
+        <div>
+          <h4 class="text-xs font-bold text-white">Compliance AI Assistant</h4>
+          <p class="text-[10px] text-slate-400">Grounded in Live SQLite Database</p>
+        </div>
+      </div>
+      <button onclick="toggleAICopilot()" class="text-slate-400 hover:text-white">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- Chat Messages Container -->
+    <div id="aiChatHistory" class="flex-1 p-4 space-y-3 overflow-y-auto text-xs max-h-80">
+      <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-slate-300 space-y-1">
+        <p class="font-bold text-indigo-400 text-[11px]">Compliance Copilot</p>
+        <p class="text-[11px] leading-relaxed">Hello! I am your AI compliance analyst. Ask me anything about current exceptions, split transactions, high-risk vendors, or Benford statistics.</p>
+      </div>
+    </div>
+
+    <!-- Suggested Quick Prompts -->
+    <div class="px-3 py-2 bg-slate-950 border-t border-slate-800 flex flex-wrap gap-1 text-[10px]">
+      <button onclick="submitAIQuestion('Who is the riskiest vendor?')" class="bg-slate-900 hover:bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-800">Riskiest Vendor?</button>
+      <button onclick="submitAIQuestion('Are there any split transactions?')" class="bg-slate-900 hover:bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-800">Split Invoices?</button>
+      <button onclick="submitAIQuestion('Summarize findings')" class="bg-slate-900 hover:bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-800">Portfolio Summary</button>
+    </div>
+
+    <!-- Chat Input Form -->
+    <form onsubmit="event.preventDefault(); submitAIChat();" class="p-3 bg-slate-900 border-t border-slate-800 flex items-center space-x-2">
+      <input type="text" id="aiChatInput" placeholder="Ask a question..." class="flex-1 bg-slate-950 border border-slate-800 text-xs text-white rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500">
+      <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-lg">
+        <i data-lucide="send" class="w-3.5 h-3.5"></i>
+      </button>
+    </form>
+  </div>
 
   <!-- ========================================== -->
   <!-- FLOATING BATCH ACTION TOOLBAR              -->
@@ -1041,6 +1199,10 @@
             <span class="text-slate-400">Split Structuring Window:</span>
             <span class="font-bold text-indigo-400">7-Day Rolling Interval</span>
           </div>
+          <div class="flex justify-between border-b border-slate-800/80 py-1">
+            <span class="text-slate-400">Sanctions Watchlist Screening:</span>
+            <span class="font-bold text-red-400">Active (Token-Sort Ratio ≥ 80%)</span>
+          </div>
           <div class="flex justify-between py-1">
             <span class="text-slate-400">Average Portfolio Risk Score:</span>
             <span id="repAvgRisk" class="font-bold text-amber-400">-- / 100</span>
@@ -1135,6 +1297,7 @@
     let chartCategoryObj = null;
     let chartBenfordObj = null;
     let activeModalInvId = null;
+    let activeParsedDoc = null;
     const selectedInvoiceIds = new Set();
 
     function showToast(msg) {
@@ -1156,7 +1319,7 @@
     }
 
     function switchMainView(viewId) {
-      ['landingView', 'studioView', 'checkerView', 'fraudView', 'vendorView', 'auditView'].forEach(v => {
+      ['landingView', 'studioView', 'checkerView', 'parserView', 'fraudView', 'vendorView', 'auditView'].forEach(v => {
         const el = document.getElementById(v);
         if (el) el.classList.add('hidden');
       });
@@ -1167,19 +1330,20 @@
         'landingView': 'navLanding',
         'studioView': 'navStudio',
         'checkerView': 'navChecker',
+        'parserView': 'navParser',
         'fraudView': 'navFraud',
         'vendorView': 'navVendor',
         'auditView': 'navAudit'
       };
 
-      ['navLanding', 'navStudio', 'navChecker', 'navFraud', 'navVendor', 'navAudit'].forEach(id => {
+      ['navLanding', 'navStudio', 'navChecker', 'navParser', 'navFraud', 'navVendor', 'navAudit'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.className = 'px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition';
+        if (el) el.className = 'px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition';
       });
 
       const activeNav = document.getElementById(navMap[viewId]);
       if (activeNav) {
-        activeNav.className = 'px-3.5 py-1.5 rounded-lg text-indigo-400 bg-indigo-500/10 font-bold transition flex items-center space-x-1';
+        activeNav.className = 'px-3 py-1.5 rounded-lg text-indigo-400 bg-indigo-500/10 font-bold transition flex items-center space-x-1';
       }
 
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1361,7 +1525,26 @@
         `).join('');
       }
 
-      // 5. Benford's Law
+      // 5. Watchlist
+      const watchRes = await fetchAPI('/watchlist');
+      if (watchRes && watchRes.watchlist) {
+        const wtbody = document.getElementById('watchlistTableBody');
+        wtbody.innerHTML = watchRes.watchlist.map(w => `
+          <tr class="hover:bg-slate-800/30 transition">
+            <td class="py-2.5 px-4 font-bold text-slate-200">${w.entity_name}</td>
+            <td class="py-2.5 px-4 text-indigo-300">${w.category}</td>
+            <td class="py-2.5 px-4 text-slate-400">${w.reason}</td>
+            <td class="py-2.5 px-4">
+              <span class="px-2 py-0.5 text-[10px] font-bold rounded ${w.risk_level === 'CRITICAL' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'}">${w.risk_level}</span>
+            </td>
+            <td class="py-2.5 px-4 text-right">
+              <button onclick="removeWatchlistEntity('${w.entity_name}')" class="text-xs text-red-400 hover:text-red-300 underline">Remove</button>
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      // 6. Benford's Law
       const benfordRes = await fetchAPI('/benford-analysis');
       if (benfordRes) {
         document.getElementById('benfordConformity').innerText = `Conformity: ${benfordRes.conformity} (MAD: ${benfordRes.mad_score})`;
@@ -1369,7 +1552,7 @@
         renderBenfordChart(benfordRes.distribution);
       }
 
-      // 6. Data Profile
+      // 7. Data Profile
       const prof = await fetchAPI('/data-profile');
       if (prof && prof.stats) {
         document.getElementById('profMin').innerText = `$${prof.stats.min_amount.toLocaleString()}`;
@@ -1386,7 +1569,7 @@
         `).join('');
       }
 
-      // 7. Audit Trail Logs
+      // 8. Audit Trail Logs
       const auditRes = await fetchAPI('/audit-trail');
       if (auditRes && auditRes.audit_trail) {
         const tbody = document.getElementById('auditTableBody');
@@ -1406,11 +1589,8 @@
 
     // --- Batch Selection Functions ---
     function toggleSelectInvoice(invId, isChecked) {
-      if (isChecked) {
-        selectedInvoiceIds.add(invId);
-      } else {
-        selectedInvoiceIds.delete(invId);
-      }
+      if (isChecked) selectedInvoiceIds.add(invId);
+      else selectedInvoiceIds.delete(invId);
       updateBatchToolbar();
     }
 
@@ -1439,11 +1619,8 @@
 
       const count = selectedInvoiceIds.size;
       countEl.innerText = count;
-      if (count > 0) {
-        bar.classList.remove('hidden');
-      } else {
-        bar.classList.add('hidden');
-      }
+      if (count > 0) bar.classList.remove('hidden');
+      else bar.classList.add('hidden');
     }
 
     async function submitBatchDecision(action) {
@@ -1477,6 +1654,14 @@
         document.getElementById('chkCategory').value = 'Office Supplies';
         document.getElementById('chkEmployee').value = 'EMP-103';
         document.getElementById('chkDescription').value = 'Ergonomic accessories & paper stock';
+      } else if (type === 'sanctions') {
+        document.getElementById('chkInvId').value = 'INV-TEST-SANCTION';
+        document.getElementById('chkVendor').value = 'Apex Shell Holdings Inc';
+        document.getElementById('chkAmount').value = '9500.00';
+        document.getElementById('chkDate').value = '2026-10-04';
+        document.getElementById('chkCategory').value = 'Consulting';
+        document.getElementById('chkEmployee').value = 'EMP-099';
+        document.getElementById('chkDescription').value = 'Offshore advisory fees';
       } else if (type === 'over-limit') {
         document.getElementById('chkInvId').value = 'INV-TEST-LIMIT';
         document.getElementById('chkVendor').value = 'Prime Steakhouse Bistro';
@@ -1523,8 +1708,8 @@
 
     async function runSingleInvoiceCheck() {
       const vendor = document.getElementById('chkVendor').value;
-      const amount = parseFloat(document.getElementById('chkAmount').value);
-      if (!vendor || isNaN(amount)) {
+      const rawAmt = document.getElementById('chkAmount').value;
+      if (!vendor || !rawAmt) {
         showToast('Please provide at least Vendor Name and Amount.');
         return;
       }
@@ -1532,7 +1717,7 @@
       const payload = {
         invoice_id: document.getElementById('chkInvId').value || `CHK-${Date.now()}`,
         vendor_name: vendor,
-        amount: amount,
+        amount: parseFloat(rawAmt.replace(/[^0-9.-]/g, '')) || 0,
         invoice_date: document.getElementById('chkDate').value || new Date().toISOString().split('T')[0],
         category: document.getElementById('chkCategory').value,
         employee_id: document.getElementById('chkEmployee').value,
@@ -1577,7 +1762,7 @@
         list.innerHTML = `
           <div class="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-xs text-emerald-400 flex items-center space-x-2">
             <i data-lucide="check-circle" class="w-4 h-4"></i>
-            <span>All compliance rules satisfied. No duplicates or structuring detected.</span>
+            <span>All compliance rules satisfied. No duplicates, sanctions, or structuring detected.</span>
           </div>
         `;
       } else {
@@ -1598,6 +1783,225 @@
         await loadData();
       }
       lucide.createIcons();
+    }
+
+    // --- Document Parser & OCR Functions ---
+    function fillSampleDoc(type) {
+      if (type === 'cloud') {
+        document.getElementById('rawDocText').value = 
+`Acme Enterprise Cloud Inc
+Invoice #: INV-44990
+Date: 2026-10-02
+Subtotal: $2,000.00
+Tax: $160.00
+Total Amount: $2,160.00
+Description: Annual software subscription for Kubernetes cluster`;
+      } else {
+        document.getElementById('rawDocText').value = 
+`Consulting Global Advisors
+Invoice #: INV-55120
+Date: 2026-10-03
+Subtotal: $3,000.00
+Tax: $300.00
+Total Amount: $3,600.00
+Description: Management strategic advisory retainer`;
+      }
+    }
+
+    async function handleDocFileUpload(file) {
+      if (!file) return;
+      showToast(`Uploading and reading ${file.name}...`);
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const res = await fetch('/parse-document', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (res.ok) {
+          renderParsedDoc(data);
+          showToast(`Parsed ${data.invoice_id} from ${file.name}!`);
+        } else {
+          showToast(`Parser error: ${data.detail}`);
+        }
+      } catch (err) {
+        showToast('Document parsing failed.');
+      }
+    }
+
+    async function parseDocumentText() {
+      const text = document.getElementById('rawDocText').value;
+      if (!text.trim()) {
+        showToast('Please paste invoice text or upload a document.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('raw_text', text);
+
+      try {
+        const res = await fetch('/parse-document', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (res.ok) {
+          renderParsedDoc(data);
+          showToast('Extracted invoice fields successfully!');
+        } else {
+          showToast(`Error: ${data.detail}`);
+        }
+      } catch (err) {
+        showToast('Extraction failed.');
+      }
+    }
+
+    function renderParsedDoc(data) {
+      activeParsedDoc = data;
+      document.getElementById('docOutId').innerText = data.invoice_id;
+      document.getElementById('docOutAmount').innerText = data.amount != null ? `$${data.amount.toLocaleString()}` : '--';
+      document.getElementById('docOutVendor').innerText = data.vendor_name;
+      document.getElementById('docOutDate').innerText = data.invoice_date || '--';
+      document.getElementById('docOutCat').innerText = data.category;
+      document.getElementById('docOutCurr').innerText = data.currency;
+
+      const badge = document.getElementById('docMathStatus');
+      const box = document.getElementById('docMathBox');
+      const resBadge = document.getElementById('docMathResultBadge');
+      const details = document.getElementById('docMathDetails');
+
+      if (data.math_verified) {
+        badge.innerText = 'Math Verified';
+        badge.className = 'px-2.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+        box.className = 'p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-xs space-y-1.5';
+        resBadge.innerText = 'PASS';
+        resBadge.className = 'text-[10px] font-bold text-emerald-400';
+        details.innerText = `Subtotal ($${data.subtotal || 0}) + Tax ($${data.tax || 0}) perfectly balances to Total Amount ($${data.amount}).`;
+      } else {
+        badge.innerText = 'Math Variance';
+        badge.className = 'px-2.5 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30';
+        box.className = 'p-4 rounded-xl border border-red-500/30 bg-red-500/10 text-xs space-y-1.5';
+        resBadge.innerText = 'VARIANCE ALERT';
+        resBadge.className = 'text-[10px] font-bold text-red-400';
+        details.innerText = data.math_note;
+      }
+
+      document.getElementById('btnSendToValidator').disabled = false;
+      lucide.createIcons();
+    }
+
+    function sendParsedToValidator() {
+      if (!activeParsedDoc) return;
+      document.getElementById('chkInvId').value = activeParsedDoc.invoice_id;
+      document.getElementById('chkVendor').value = activeParsedDoc.vendor_name;
+      document.getElementById('chkAmount').value = activeParsedDoc.amount || '';
+      document.getElementById('chkDate').value = activeParsedDoc.invoice_date || '';
+      document.getElementById('chkCategory').value = activeParsedDoc.category;
+      document.getElementById('chkDescription').value = activeParsedDoc.description || '';
+
+      switchMainView('checkerView');
+      runSingleInvoiceCheck();
+    }
+
+    // --- Watchlist Management Functions ---
+    async function submitNewWatchlistEntity() {
+      const name = document.getElementById('watchName').value;
+      const reason = document.getElementById('watchReason').value;
+      const risk = document.getElementById('watchRisk').value;
+      if (!name || !reason) {
+        showToast('Please provide entity name and reason.');
+        return;
+      }
+
+      const res = await fetchAPI('/watchlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entity_name: name, reason: reason, risk_level: risk })
+      });
+
+      if (res && res.status === 'success') {
+        showToast(`Added '${name}' to restricted watchlist!`);
+        document.getElementById('watchName').value = '';
+        document.getElementById('watchReason').value = '';
+        document.getElementById('addWatchlistForm').classList.add('hidden');
+        await loadData();
+      }
+    }
+
+    async function removeWatchlistEntity(name) {
+      if (!confirm(`Remove '${name}' from watchlist?`)) return;
+      const res = await fetchAPI(`/watchlist/${encodeURIComponent(name)}`, { method: 'DELETE' });
+      if (res && res.status === 'success') {
+        showToast(`Removed '${name}' from watchlist.`);
+        await loadData();
+      }
+    }
+
+    // --- Compliance AI Copilot Functions ---
+    function toggleAICopilot() {
+      const drawer = document.getElementById('aiCopilotDrawer');
+      drawer.classList.toggle('hidden');
+      if (!drawer.classList.contains('hidden')) {
+        const inp = document.getElementById('aiChatInput');
+        if (inp) inp.focus();
+      }
+    }
+
+    function submitAIQuestion(q) {
+      document.getElementById('aiChatInput').value = q;
+      submitAIChat();
+    }
+
+    async function submitAIChat() {
+      const input = document.getElementById('aiChatInput');
+      const query = input.value.trim();
+      if (!query) return;
+
+      const history = document.getElementById('aiChatHistory');
+
+      // Append user bubble
+      history.innerHTML += `
+        <div class="bg-indigo-600/20 p-2.5 rounded-xl border border-indigo-500/30 text-right space-y-1">
+          <p class="font-bold text-indigo-300 text-[10px]">Auditor</p>
+          <p class="text-white text-[11px]">${query}</p>
+        </div>
+      `;
+
+      input.value = '';
+      history.scrollTop = history.scrollHeight;
+
+      // Temporary typing indicator
+      const typingId = `type_${Date.now()}`;
+      history.innerHTML += `
+        <div id="${typingId}" class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-slate-400 text-[11px] animate-pulse">
+          Analyzing ledger and calculating metrics...
+        </div>
+      `;
+      history.scrollTop = history.scrollHeight;
+
+      const res = await fetchAPI('/ask-ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: query })
+      });
+
+      const typingEl = document.getElementById(typingId);
+      if (typingEl) typingEl.remove();
+
+      if (res && res.answer) {
+        history.innerHTML += `
+          <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-slate-300 space-y-1.5">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-purple-400 text-[10px] uppercase">${res.category || 'AI Finding'}</span>
+              ${res.citations && res.citations.length > 0 ? `<span class="text-[9px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded font-mono">Ref: ${res.citations.join(', ')}</span>` : ''}
+            </div>
+            <p class="text-[11px] leading-relaxed">${res.answer}</p>
+          </div>
+        `;
+      } else {
+        history.innerHTML += `
+          <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-slate-400 text-[11px]">
+            Unable to analyze query. Please try asking again.
+          </div>
+        `;
+      }
+      history.scrollTop = history.scrollHeight;
     }
 
     // --- Dynamic Policy Modal Functions ---
@@ -1868,6 +2272,8 @@
         closeModal();
         closePolicyModal();
         closeReportModal();
+        const drawer = document.getElementById('aiCopilotDrawer');
+        if (drawer && !drawer.classList.contains('hidden')) drawer.classList.add('hidden');
       }
     });
 
