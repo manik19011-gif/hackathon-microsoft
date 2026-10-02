@@ -37,7 +37,7 @@ def test_rule_engine_over_limit():
     }
     violations = evaluate_invoice_rules(inv, amount_limit=5000.0)
     assert len(violations) == 1
-    assert violations[0]["rule"] == "Amount Limit Policy Check"
+    assert violations[0]["rule"] == "Global Amount Limit Policy Check"
     assert violations[0]["status"] == "REVIEW"
 
 def test_rule_engine_missing_field():

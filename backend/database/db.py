@@ -26,6 +26,7 @@ def init_db():
         employee_id TEXT,
         description TEXT,
         status TEXT DEFAULT 'PASS',
+        risk_score INTEGER DEFAULT 0,
         source TEXT DEFAULT 'Kaggle-derived Demo Case',
         raw_data TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
