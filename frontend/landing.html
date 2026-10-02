@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invoice & Expense Compliance Checker — Enterprise AI SaaS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .gradient-text {
+      background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-glow {
+      background: radial-gradient(circle at 50% 30%, rgba(99, 102, 241, 0.15) 0%, rgba(15, 23, 42, 0) 70%);
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 antialiased min-h-screen flex flex-col">
+
+  <!-- Navigation Header -->
+  <header class="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="p-2 bg-gradient-to-tr from-indigo-600 to-purple-600 rounded-xl text-white shadow-lg shadow-indigo-500/20">
+          <i data-lucide="shield-check" class="w-7 h-7"></i>
+        </div>
+        <div>
+          <span class="text-xl font-bold tracking-tight text-white">InvoiceCompliance<span class="text-indigo-400">.AI</span></span>
+          <span class="ml-2 text-[10px] font-bold uppercase tracking-wider bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded border border-indigo-500/20">Microsoft Hackathon</span>
+        </div>
+      </div>
+
+      <nav class="hidden md:flex items-center space-x-8 text-sm font-medium text-slate-400">
+        <a href="#features" class="hover:text-white transition">Features</a>
+        <a href="#architecture" class="hover:text-white transition">Architecture</a>
+        <a href="#fraud-prevention" class="hover:text-white transition">Fraud Detection</a>
+        <a href="http://localhost:8000/docs" target="_blank" class="hover:text-white transition">API Docs</a>
+      </nav>
+
+      <div class="flex items-center space-x-4">
+        <a href="https://github.com/manik19011-gif/hackathon-microsoft" target="_blank" class="hidden sm:flex items-center space-x-2 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-300 px-4 py-2.5 rounded-lg border border-slate-800 transition">
+          <i data-lucide="github" class="w-4 h-4"></i>
+          <span>GitHub Repo</span>
+        </a>
+        <a href="index.html" class="flex items-center space-x-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-lg shadow-lg shadow-indigo-500/25 transition">
+          <span>Launch App Dashboard</span>
+          <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero-glow py-24 lg:py-32 border-b border-slate-800/60 relative overflow-hidden">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8 relative z-10">
+      
+      <div class="inline-flex items-center space-x-2 bg-indigo-500/10 border border-indigo-500/20 px-4 py-1.5 rounded-full text-xs font-semibold text-indigo-300">
+        <span class="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>Enterprise Expense Audit & Anti-Fraud Platform</span>
+      </div>
+
+      <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight max-w-5xl mx-auto leading-tight">
+        Automate Expense Compliance & Stop <span class="gradient-text">Invoice Fraud</span> in Seconds
+      </h1>
+
+      <p class="text-lg sm:text-xl text-slate-400 max-w-3xl mx-auto leading-relaxed">
+        Engineered with <strong>Benford's Law statistical screening</strong>, <strong>RapidFuzz fuzzy duplicate matching</strong>, <strong>threshold structuring detection</strong>, and <strong>Azure OpenAI evidence-based audit explanations</strong>.
+      </p>
+
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+        <a href="index.html" class="w-full sm:w-auto flex items-center justify-center space-x-2 text-sm font-bold bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 rounded-xl shadow-xl shadow-indigo-500/30 transition transform hover:-translate-y-0.5">
+          <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+          <span>Open Compliance Dashboard</span>
+        </a>
+        <a href="http://localhost:8000/docs" target="_blank" class="w-full sm:w-auto flex items-center justify-center space-x-2 text-sm font-bold bg-slate-900 hover:bg-slate-800 text-slate-200 px-8 py-4 rounded-xl border border-slate-800 transition">
+          <i data-lucide="code" class="w-5 h-5 text-indigo-400"></i>
+          <span>Explore OpenAPI Endpoints</span>
+        </a>
+      </div>
+
+      <!-- Feature Badges -->
+      <div class="pt-12 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto text-xs text-slate-400 font-medium">
+        <div class="flex items-center justify-center space-x-2 bg-slate-900/60 p-3 rounded-lg border border-slate-800">
+          <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+          <span>SOX 404 & GAAP Audit Ready</span>
+        </div>
+        <div class="flex items-center justify-center space-x-2 bg-slate-900/60 p-3 rounded-lg border border-slate-800">
+          <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
+          <span>RapidFuzz Similarity Matching</span>
+        </div>
+        <div class="flex items-center justify-center space-x-2 bg-slate-900/60 p-3 rounded-lg border border-slate-800">
+          <i data-lucide="trending-up" class="w-4 h-4 text-purple-400"></i>
+          <span>Benford Statistical Screening</span>
+        </div>
+        <div class="flex items-center justify-center space-x-2 bg-slate-900/60 p-3 rounded-lg border border-slate-800">
+          <i data-lucide="cpu" class="w-4 h-4 text-indigo-400"></i>
+          <span>Azure OpenAI Audit Reasoning</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Product Features Grid -->
+  <section id="features" class="py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
+    <div class="text-center space-y-4 max-w-3xl mx-auto">
+      <h2 class="text-xs font-bold uppercase tracking-widest text-indigo-400">Multi-Layer Compliance Engine</h2>
+      <p class="text-3xl font-extrabold text-white">Comprehensive Protection Against Corporate Expense Leakage</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      
+      <div class="bg-slate-900 p-8 rounded-2xl border border-slate-800 space-y-4 hover:border-slate-700 transition">
+        <div class="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl w-fit border border-indigo-500/20">
+          <i data-lucide="copy" class="w-6 h-6"></i>
+        </div>
+        <h3 class="text-lg font-bold text-white">RapidFuzz Duplicate Matching</h3>
+        <p class="text-xs text-slate-400 leading-relaxed">
+          Detects exact duplicate invoice IDs alongside fuzzy vendor name variations (e.g. <em>"Acme Supplies"</em> vs <em>"ACME Corp"</em>) with identical amounts.
+        </p>
+      </div>
+
+      <div class="bg-slate-900 p-8 rounded-2xl border border-slate-800 space-y-4 hover:border-slate-700 transition">
+        <div class="p-3 bg-purple-500/10 text-purple-400 rounded-xl w-fit border border-purple-500/20">
+          <i data-lucide="trending-up" class="w-6 h-6"></i>
+        </div>
+        <h3 class="text-lg font-bold text-white">Benford's Law Fraud Screening</h3>
+        <p class="text-xs text-slate-400 leading-relaxed">
+          Applies logarithmic leading-digit distribution frequency analysis to flag fabricated or manually altered invoice amounts.
+        </p>
+      </div>
+
+      <div class="bg-slate-900 p-8 rounded-2xl border border-slate-800 space-y-4 hover:border-slate-700 transition">
+        <div class="p-3 bg-amber-500/10 text-amber-400 rounded-xl w-fit border border-amber-500/20">
+          <i data-lucide="scissors" class="w-6 h-6"></i>
+        </div>
+        <h3 class="text-lg font-bold text-white">Split Transaction Structuring</h3>
+        <p class="text-xs text-slate-400 leading-relaxed">
+          Catches multiple invoices submitted from the same vendor that intentionally hover just below policy approval thresholds (e.g. $4,900 to bypass $5,000 limits).
+        </p>
+      </div>
+
+      <div class="bg-slate-900 p-8 rounded-2xl border border-slate-800 space-y-4 hover:border-slate-700 transition">
+        <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl w-fit border border-emerald-500/20">
+          <i data-lucide="bot" class="w-6 h-6"></i>
+        </div>
+        <h3 class="text-lg font-bold text-white">Azure OpenAI Evidence Generator</h3>
+        <p class="text-xs text-slate-400 leading-relaxed">
+          Translates compliance findings into human-readable audit explanations based strictly on factual evidence without hallucinating details.
+        </p>
+      </div>
+
+      <div class="bg-slate-900 p-8 rounded-2xl border border-slate-800 space-y-4 hover:border-slate-700 transition">
+        <div class="p-3 bg-blue-500/10 text-blue-400 rounded-xl w-fit border border-blue-500/20">
+          <i data-lucide="building" class="w-6 h-6"></i>
+        </div>
+        <h3 class="text-lg font-bold text-white">Vendor Risk Intelligence</h3>
+        <p class="text-xs text-slate-400 leading-relaxed">
+          Ranks vendor risk profiles (HIGH, MEDIUM, LOW) based on violation frequency, spend volume, and historical non-compliance.
+        </p>
+      </div>
+
+      <div class="bg-slate-900 p-8 rounded-2xl border border-slate-800 space-y-4 hover:border-slate-700 transition">
+        <div class="p-3 bg-pink-500/10 text-pink-400 rounded-xl w-fit border border-pink-500/20">
+          <i data-lucide="history" class="w-6 h-6"></i>
+        </div>
+        <h3 class="text-lg font-bold text-white">SOX Audit Trail Logs</h3>
+        <p class="text-xs text-slate-400 leading-relaxed">
+          Maintains an immutable audit log of all system ingestion events and human auditor decision actions (Approve, Reject, Escalate).
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- CTA Banner Footer -->
+  <footer class="mt-auto border-t border-slate-800/80 bg-slate-950 py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
+      <div class="flex items-center justify-center space-x-2 text-slate-400 text-xs font-semibold">
+        <i data-lucide="shield-check" class="w-4 h-4 text-indigo-400"></i>
+        <span>Invoice Compliance Assistant — Built for Microsoft Hackathon</span>
+      </div>
+      <p class="text-xs text-slate-500">© 2026 Manik Gupta. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>
