@@ -31,13 +31,11 @@
       </div>
       
       <div class="flex items-center space-x-3">
-        <!-- CSV Export Button -->
         <a href="http://localhost:8000/export-exceptions-csv" target="_blank" class="flex items-center space-x-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-semibold px-3 py-2 rounded-lg transition border border-slate-600">
           <i data-lucide="download" class="w-3.5 h-3.5"></i>
           <span>Export CSV</span>
         </a>
 
-        <!-- Policy Threshold Control -->
         <div class="flex items-center bg-slate-700/60 rounded-lg px-3 py-1.5 border border-slate-600">
           <label class="text-xs text-slate-300 font-medium mr-2">Limit Limit:</label>
           <span class="text-xs text-indigo-400 font-bold">$</span>
@@ -170,8 +168,14 @@
           <button onclick="switchTab('invoicesTab')" id="btnTabInvoices" class="text-sm font-semibold text-slate-400 hover:text-slate-200 pb-2 transition">
             All Invoices & Risk Scores
           </button>
+          <button onclick="switchTab('benfordTab')" id="btnTabBenford" class="text-sm font-semibold text-slate-400 hover:text-slate-200 pb-2 transition">
+            Benford's Law Fraud Analysis
+          </button>
           <button onclick="switchTab('profilerTab')" id="btnTabProfiler" class="text-sm font-semibold text-slate-400 hover:text-slate-200 pb-2 transition">
-            Dataset Data Profile
+            Dataset Profile
+          </button>
+          <button onclick="switchTab('auditTab')" id="btnTabAudit" class="text-sm font-semibold text-slate-400 hover:text-slate-200 pb-2 transition">
+            SOX Audit Logs
           </button>
         </div>
 
@@ -244,7 +248,25 @@
         </div>
       </div>
 
-      <!-- Tab 3: Dataset Profiler -->
+      <!-- Tab 3: Benford's Law Fraud Screening -->
+      <div id="benfordTab" class="p-6 space-y-6 hidden">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-md font-semibold text-white flex items-center space-x-2">
+              <i data-lucide="trending-up" class="w-5 h-5 text-purple-400"></i>
+              <span>Benford's Law First-Digit Statistical Screening</span>
+            </h2>
+            <p class="text-xs text-slate-400 mt-1">Detects non-conforming financial data distributions indicative of manual fabrication or fraud</p>
+          </div>
+          <span id="benfordConformity" class="px-3 py-1 rounded text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">Conformity: Loading...</span>
+        </div>
+
+        <div class="h-64 bg-slate-900/40 p-4 rounded-lg border border-slate-700">
+          <canvas id="chartBenford"></canvas>
+        </div>
+      </div>
+
+      <!-- Tab 4: Dataset Profiler -->
       <div id="profilerTab" class="p-6 space-y-6 hidden">
         <div class="flex items-center justify-between">
           <h2 class="text-md font-semibold text-white flex items-center space-x-2">
@@ -273,6 +295,34 @@
         </div>
       </div>
 
+      <!-- Tab 5: Audit Trail -->
+      <div id="auditTab" class="p-6 space-y-4 hidden">
+        <div class="flex items-center justify-between">
+          <h2 class="text-md font-semibold text-white flex items-center space-x-2">
+            <i data-lucide="history" class="w-5 h-5 text-blue-400"></i>
+            <span>SOX / GAAP Audit Trail Logs</span>
+          </h2>
+        </div>
+
+        <div class="overflow-x-auto rounded-lg border border-slate-700">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-slate-900/80 text-slate-400 font-semibold uppercase tracking-wider text-[11px] border-b border-slate-700">
+              <tr>
+                <th class="py-3 px-4">Timestamp</th>
+                <th class="py-3 px-4">User</th>
+                <th class="py-3 px-4">Action</th>
+                <th class="py-3 px-4">Details</th>
+              </tr>
+            </thead>
+            <tbody id="auditTableBody" class="divide-y divide-slate-700/60 bg-slate-800/40">
+              <tr>
+                <td colspan="4" class="py-8 text-center text-slate-500">Loading audit trail...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
 
   </main>
@@ -281,6 +331,7 @@
     const API_BASE = 'http://localhost:8000';
     let chartStatusObj = null;
     let chartCategoryObj = null;
+    let chartBenfordObj = null;
 
     async function fetchAPI(endpoint, options = {}) {
       try {
@@ -366,7 +417,14 @@
         renderCategoryChart(catMap);
       }
 
-      // 4. Data Profile
+      // 4. Benford's Law
+      const benfordRes = await fetchAPI('/benford-analysis');
+      if (benfordRes) {
+        document.getElementById('benfordConformity').innerText = `Conformity: ${benfordRes.conformity} (MAD: ${benfordRes.mad_score})`;
+        renderBenfordChart(benfordRes.distribution);
+      }
+
+      // 5. Data Profile
       const prof = await fetchAPI('/data-profile');
       if (prof && prof.stats) {
         document.getElementById('profMin').innerText = `$${prof.stats.min_amount.toLocaleString()}`;
@@ -380,6 +438,20 @@
             <span class="text-slate-400 font-mono">${col}:</span>
             <span class="font-semibold ${count > 0 ? 'text-amber-400' : 'text-emerald-400'}">${count} missing</span>
           </div>
+        `).join('');
+      }
+
+      // 6. Audit Trail Logs
+      const auditRes = await fetchAPI('/audit-trail');
+      if (auditRes && auditRes.audit_trail) {
+        const tbody = document.getElementById('auditTableBody');
+        tbody.innerHTML = auditRes.audit_trail.map(a => `
+          <tr class="hover:bg-slate-700/30 transition">
+            <td class="py-3 px-4 font-mono text-slate-400">${a.timestamp}</td>
+            <td class="py-3 px-4 text-slate-300 font-semibold">${a.user_name}</td>
+            <td class="py-3 px-4 text-indigo-400 font-medium">${a.action}</td>
+            <td class="py-3 px-4 text-slate-400">${a.details}</td>
+          </tr>
         `).join('');
       }
 
@@ -437,6 +509,50 @@
       });
     }
 
+    function renderBenfordChart(distribution) {
+      const ctx = document.getElementById('chartBenford').getContext('2d');
+      if (chartBenfordObj) chartBenfordObj.destroy();
+
+      const labels = distribution.map(d => `Digit ${d.digit}`);
+      const actualData = distribution.map(d => d.actual_pct);
+      const expectedData = distribution.map(d => d.expected_pct);
+
+      chartBenfordObj = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Actual Observed %',
+              data: actualData,
+              backgroundColor: '#a855f7',
+              borderRadius: 4
+            },
+            {
+              label: 'Theoretical Benford %',
+              data: expectedData,
+              type: 'line',
+              borderColor: '#38bdf8',
+              borderWidth: 2,
+              pointRadius: 4,
+              fill: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 10 } } },
+            y: { ticks: { color: '#94a3b8', font: { size: 10 } } }
+          },
+          plugins: {
+            legend: { labels: { color: '#94a3b8', font: { size: 11 } } }
+          }
+        }
+      });
+    }
+
     async function handleFileUpload(file) {
       if (!file) return;
       const statusEl = document.getElementById('uploadStatus');
@@ -476,19 +592,21 @@
     }
 
     function switchTab(tabId) {
-      ['exceptionsTab', 'invoicesTab', 'profilerTab'].forEach(t => {
+      ['exceptionsTab', 'invoicesTab', 'benfordTab', 'profilerTab', 'auditTab'].forEach(t => {
         document.getElementById(t).classList.add('hidden');
       });
       document.getElementById(tabId).classList.remove('hidden');
 
-      ['btnTabExceptions', 'btnTabInvoices', 'btnTabProfiler'].forEach(b => {
+      ['btnTabExceptions', 'btnTabInvoices', 'btnTabBenford', 'btnTabProfiler', 'btnTabAudit'].forEach(b => {
         document.getElementById(b).className = 'text-sm font-semibold text-slate-400 hover:text-slate-200 pb-2 transition';
       });
       
       const activeMap = {
         'exceptionsTab': 'btnTabExceptions',
         'invoicesTab': 'btnTabInvoices',
-        'profilerTab': 'btnTabProfiler'
+        'benfordTab': 'btnTabBenford',
+        'profilerTab': 'btnTabProfiler',
+        'auditTab': 'btnTabAudit'
       };
       document.getElementById(activeMap[tabId]).className = 'text-sm font-semibold text-indigo-400 border-b-2 border-indigo-500 pb-2 transition';
     }

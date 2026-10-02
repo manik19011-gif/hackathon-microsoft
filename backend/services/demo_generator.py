@@ -3,7 +3,7 @@ from typing import List, Dict, Any
 def get_demo_dataset() -> List[Dict[str, Any]]:
     """
     Returns controlled demo test cases clearly labeled as 'Kaggle-derived Demo Case'.
-    Contains specific compliance test scenarios.
+    Contains specific compliance, duplicate, and split transaction test scenarios.
     """
     return [
         {
@@ -79,6 +79,27 @@ def get_demo_dataset() -> List[Dict[str, Any]]:
             "category": "Consulting",
             "employee_id": "EMP-771",
             "description": "External software audit consulting",
+            "source": "Kaggle-derived Demo Case"
+        },
+        # Controlled Anomaly 6 & 7: Split Transactions / Structuring ($4,850 and $4,920 to bypass $5,000 threshold)
+        {
+            "invoice_id": "INV-1008-A",
+            "vendor_name": "Apex IT Procurement Solutions",
+            "invoice_date": "2026-09-26",
+            "amount": 4850.00,
+            "category": "Software Licensing",
+            "employee_id": "EMP-902",
+            "description": "Software license batch 1 (split)",
+            "source": "Kaggle-derived Demo Case"
+        },
+        {
+            "invoice_id": "INV-1008-B",
+            "vendor_name": "Apex IT Procurement Solutions",
+            "invoice_date": "2026-09-26",
+            "amount": 4920.00,
+            "category": "Software Licensing",
+            "employee_id": "EMP-902",
+            "description": "Software license batch 2 (split)",
             "source": "Kaggle-derived Demo Case"
         },
         {

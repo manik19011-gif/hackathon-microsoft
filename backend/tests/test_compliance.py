@@ -80,3 +80,25 @@ def test_ai_explainer_fallback():
     explanation = generate_ai_explanation(violation)
     assert "Amount Limit Policy Check" in explanation
     assert "MEDIUM" in explanation
+
+def test_split_transaction_detector():
+    from services.split_detector import detect_split_transactions
+    invoices = [
+        {"invoice_id": "INV-S1", "vendor_name": "Tech Corp", "amount": 4800.0, "invoice_date": "2026-10-01"},
+        {"invoice_id": "INV-S2", "vendor_name": "Tech Corp", "amount": 4900.0, "invoice_date": "2026-10-01"}
+    ]
+    violations = detect_split_transactions(invoices, amount_limit=5000.0)
+    assert len(violations) == 2
+    assert violations[0]["rule"] == "Split Transaction / Threshold Evasion Check"
+
+def test_benford_law_analysis():
+    from services.benford import analyze_benford_law
+    invoices = [
+        {"amount": 120.0}, {"amount": 150.0}, {"amount": 190.0},
+        {"amount": 210.0}, {"amount": 340.0}, {"amount": 410.0}
+    ]
+    result = analyze_benford_law(invoices)
+    assert result["total_analyzed"] == 6
+    assert "conformity" in result
+    assert len(result["distribution"]) == 9
+

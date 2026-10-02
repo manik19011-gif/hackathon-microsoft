@@ -1,7 +1,6 @@
 from fastapi import FastAPI, HTTPException, Query, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response, StreamingResponse
-from pydantic import BaseModel
+from fastapi.responses import Response
 from typing import List, Dict, Any, Optional
 import os
 import sqlite3
@@ -15,6 +14,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from database.db import get_connection, init_db, log_audit
 from services.rule_engine import evaluate_invoice_rules, calculate_risk_score
 from services.duplicate_detector import detect_duplicates
+from services.split_detector import detect_split_transactions
+from services.benford import analyze_benford_law
 from services.profiler import generate_data_profile
 from services.ai_explainer import generate_ai_explanation
 from services.demo_generator import get_demo_dataset
@@ -22,8 +23,8 @@ from services.data_loader import load_and_process_dataset
 
 app = FastAPI(
     title="Invoice & Expense Checker Assistant API",
-    description="Automated compliance, duplicate detection, and AI audit for enterprise expense invoices.",
-    version="1.1.0"
+    description="Automated compliance, duplicate detection, split transaction analysis, Benford's Law screening, and AI audit for enterprise expense invoices.",
+    version="1.2.0"
 )
 
 app.add_middleware(
@@ -53,12 +54,11 @@ def health_check():
 
 def process_and_store_invoices(invoices: List[Dict[str, Any]], amount_limit: float = 5000.0):
     """
-    Runs rule engine + duplicate detector and persists records + exceptions into SQLite.
+    Runs rule engine, duplicate detector, and split transaction detector. Persists records + exceptions into SQLite.
     """
     conn = get_connection()
     cursor = conn.cursor()
     
-    # Check if risk_score column exists
     cursor.execute("PRAGMA table_info(invoices)")
     cols = [r["name"] for r in cursor.fetchall()]
     if "risk_score" not in cols:
@@ -80,14 +80,22 @@ def process_and_store_invoices(invoices: List[Dict[str, Any]], amount_limit: flo
             invoice_violations_map[inv_id].append(dup_v)
         else:
             invoice_violations_map[inv_id] = [dup_v]
+
+    # 3. Evaluate Split Transaction Detection across dataset
+    split_violations = detect_split_transactions(invoices, amount_limit=amount_limit)
+    for split_v in split_violations:
+        inv_id = split_v["invoice_id"]
+        if inv_id in invoice_violations_map:
+            invoice_violations_map[inv_id].append(split_v)
+        else:
+            invoice_violations_map[inv_id] = [split_v]
             
-    # 3. Persist to Database
+    # 4. Persist to Database
     for inv in invoices:
         inv_id = str(inv.get("invoice_id") or "UNKNOWN")
         violations = invoice_violations_map.get(inv_id, [])
         risk_score = calculate_risk_score(violations)
         
-        # Determine overall status
         status = "PASS"
         if any(v["status"] == "FAIL" for v in violations):
             status = "FAIL"
@@ -112,7 +120,6 @@ def process_and_store_invoices(invoices: List[Dict[str, Any]], amount_limit: flo
             json.dumps(inv)
         ))
         
-        # Store violations
         for v in violations:
             cursor.execute("""
                 INSERT INTO exceptions (invoice_id, rule, status, reason, evidence, severity)
@@ -143,9 +150,6 @@ def seed_demo(amount_limit: float = Query(5000.0, description="Configurable amou
 
 @app.post("/upload-dataset")
 async def upload_dataset(file: UploadFile = File(...), amount_limit: float = Query(5000.0)):
-    """
-    Upload CSV or Excel file directly into dataset processing pipeline.
-    """
     temp_dir = os.path.join(os.path.dirname(__file__), "data", "raw")
     os.makedirs(temp_dir, exist_ok=True)
     file_path = os.path.join(temp_dir, file.filename)
@@ -249,11 +253,34 @@ def list_exceptions(severity: Optional[str] = None):
         
     return {"exceptions": rows, "count": len(rows)}
 
+@app.get("/benford-analysis")
+def get_benford_analysis():
+    """
+    Performs Benford's Law leading digit statistical screening across all invoice amounts.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT amount FROM invoices WHERE amount IS NOT NULL")
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    
+    result = analyze_benford_law(rows)
+    return result
+
+@app.get("/audit-trail")
+def get_audit_trail(limit: int = 50):
+    """
+    Returns immutable audit logs for SOX / GAAP compliance verification.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM audit_logs ORDER BY id DESC LIMIT ?", (limit,))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return {"audit_trail": rows, "count": len(rows)}
+
 @app.get("/export-exceptions-csv")
 def export_exceptions_csv():
-    """
-    Generates downloadable CSV report of all flagged compliance exceptions.
-    """
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -308,11 +335,14 @@ def get_dashboard_stats():
     
     cursor.execute("SELECT COUNT(*) as dups FROM exceptions WHERE rule LIKE '%Duplicate%'")
     duplicates_count = cursor.fetchone()["dups"]
+
+    cursor.execute("SELECT COUNT(*) as splits FROM exceptions WHERE rule LIKE '%Split%'")
+    splits_count = cursor.fetchone()["splits"]
     
     cursor.execute("SELECT COUNT(*) as missing FROM exceptions WHERE rule LIKE '%Required%'")
     missing_count = cursor.fetchone()["missing"]
 
-    cursor.execute("SELECT COUNT(*) as over_limit FROM exceptions WHERE rule LIKE '%Amount Limit%' OR rule LIKE '%Threshold%'")
+    cursor.execute("SELECT COUNT(*) as over_limit FROM exceptions WHERE rule LIKE '%Limit%' OR rule LIKE '%Threshold%'")
     over_limit_count = cursor.fetchone()["over_limit"]
 
     cursor.execute("SELECT SUM(amount) as total_amt FROM invoices WHERE amount IS NOT NULL")
@@ -332,6 +362,7 @@ def get_dashboard_stats():
         "review_records": review_records,
         "fail_records": fail_records,
         "possible_duplicates": duplicates_count,
+        "split_transactions_count": splits_count,
         "missing_fields_count": missing_count,
         "over_limit_count": over_limit_count,
         "total_amount": total_amount,
