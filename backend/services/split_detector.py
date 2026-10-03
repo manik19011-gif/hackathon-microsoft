@@ -69,12 +69,15 @@ def detect_split_transactions(invoices: List[Dict[str, Any]], amount_limit: floa
                 
                 for inv in near_threshold_invoices:
                     inv_id = str(inv.get("invoice_id") or "UNKNOWN")
+                    counterparts = [x for x in inv_ids if x != inv_id]
                     violations.append({
                         "invoice_id": inv_id,
                         "rule": "Split Transaction / Threshold Evasion Check",
                         "status": "FAIL",
                         "reason": f"Suspicious split transaction pattern detected for vendor '{inv.get('vendor_name')}'. {len(near_threshold_invoices)} invoices totaling ${total_split_amt:,.2f} hover just below approval threshold (${amount_limit:,.2f}) within {max_day_window} days",
                         "evidence": f"Multiple near-limit invoices ({', '.join(inv_ids)}) totaling ${total_split_amt:,.2f} > Policy Limit ${amount_limit:,.2f}",
+                        "citation": f"Matched split transaction cohort: Invoices [{', '.join(counterparts)}] from vendor '{inv.get('vendor_name')}' within {max_day_window} days",
+                        "matched_invoice_ids": counterparts,
                         "severity": "HIGH"
                     })
 

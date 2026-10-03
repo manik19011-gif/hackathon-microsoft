@@ -7,7 +7,7 @@ def detect_duplicates(invoices: List[Dict[str, Any]], similarity_threshold: floa
     Adaptively handles missing or optional fields and optimizes comparison speed.
     """
     violations = []
-    seen_ids: Dict[str, str] = {}
+    seen_records: Dict[str, Dict[str, Any]] = {}
     
     # 1. Exact Duplicate ID check (Skip placeholder or auto-gen IDs)
     for inv in invoices:
@@ -15,17 +15,20 @@ def detect_duplicates(invoices: List[Dict[str, Any]], similarity_threshold: floa
         if not inv_id or inv_id.lower() in ["none", "nan", "unknown", ""] or inv_id.startswith("AUTO_GEN_"):
             continue
             
-        if inv_id in seen_ids:
+        if inv_id in seen_records:
+            prior = seen_records[inv_id]
             violations.append({
                 "invoice_id": inv_id,
                 "rule": "Exact Duplicate Identifier Check",
                 "status": "FAIL",
                 "reason": f"Duplicate invoice ID detected: '{inv_id}'",
                 "evidence": f"Multiple records share the same invoice_id: '{inv_id}'",
+                "citation": f"Matched prior record: Invoice '{inv_id}' (Vendor: '{prior.get('vendor_name')}', Amount: ${prior.get('amount')}, Date: '{prior.get('invoice_date')}')",
+                "matched_invoice_id": inv_id,
                 "severity": "HIGH"
             })
         else:
-            seen_ids[inv_id] = inv_id
+            seen_records[inv_id] = inv
 
     # 2. Optimized Comparison for Exact & Similar Duplicates
     n = len(invoices)
@@ -60,6 +63,7 @@ def detect_duplicates(invoices: List[Dict[str, Any]], similarity_threshold: floa
 
             # Check exact vendor + amount + date match
             if vendor_a == vendor_b and amounts_match:
+                citation_exact = f"Matched prior record: Invoice '{id_a}' (Vendor: '{inv_a.get('vendor_name')}', Amount: ${amount_a}, Date: '{date_a}')"
                 if date_a and date_b and date_a == date_b:
                     violations.append({
                         "invoice_id": id_b,
@@ -67,6 +71,8 @@ def detect_duplicates(invoices: List[Dict[str, Any]], similarity_threshold: floa
                         "status": "FAIL",
                         "reason": f"Exact duplicate record found matching Invoice '{id_a}' (Vendor: '{inv_a.get('vendor_name')}', Amount: ${amount_a}, Date: '{date_a}')",
                         "evidence": f"Identical Vendor, Amount (${amount_a}), and Date ({date_a}) across '{id_a}' and '{id_b}'",
+                        "citation": citation_exact,
+                        "matched_invoice_id": id_a,
                         "severity": "HIGH"
                     })
                     continue
@@ -78,6 +84,8 @@ def detect_duplicates(invoices: List[Dict[str, Any]], similarity_threshold: floa
                         "status": "FAIL",
                         "reason": f"Duplicate transaction detected: Identical Vendor and Amount matching Invoice '{id_a}'",
                         "evidence": f"Vendor: '{inv_a.get('vendor_name')}', Amount: ${amount_a} across '{id_a}' and '{id_b}'",
+                        "citation": citation_exact,
+                        "matched_invoice_id": id_a,
                         "severity": "HIGH"
                     })
                     continue
@@ -86,12 +94,15 @@ def detect_duplicates(invoices: List[Dict[str, Any]], similarity_threshold: floa
             if amounts_match and vendor_a != vendor_b:
                 sim_score = fuzz.ratio(vendor_a, vendor_b)
                 if sim_score >= similarity_threshold:
+                    citation_fuzzy = f"Matched prior record: Invoice '{id_a}' (Vendor: '{inv_a.get('vendor_name')}', Amount: ${amount_a}, Similarity: {sim_score:.0f}%)"
                     violations.append({
                         "invoice_id": id_b,
                         "rule": "Similar Duplicate Vendor Check",
                         "status": "REVIEW",
                         "reason": f"Suspiciously similar invoice found compared to '{id_a}'. Vendor similarity: {sim_score:.0f}% ('{inv_a.get('vendor_name')}' vs '{inv_b.get('vendor_name')}') with identical amount ${amount_a}",
                         "evidence": f"Vendor match score: {sim_score:.0f}%, Amount: ${amount_a}, Matched with Invoice '{id_a}'",
+                        "citation": citation_fuzzy,
+                        "matched_invoice_id": id_a,
                         "severity": "MEDIUM"
                     })
 

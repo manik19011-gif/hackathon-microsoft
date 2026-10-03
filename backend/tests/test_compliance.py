@@ -277,6 +277,72 @@ def test_export_erp_json():
     assert "erp_system" in data
     assert "records" in data
 
+def test_auto_pass_clean_and_exception_pile():
+    from backend.main import process_and_store_invoices
+    from backend.database.db import get_connection
+
+    test_batch = [
+        {
+            "invoice_id": "TEST-AUTO-PASS-01",
+            "vendor_name": "Standard Office Supply",
+            "invoice_date": "2026-10-01",
+            "amount": 250.0,
+            "category": "Office Supplies",
+            "employee_id": "EMP-500",
+            "description": "Printers paper refill"
+        },
+        {
+            "invoice_id": "TEST-EXC-PILE-01",
+            "vendor_name": "Over Limit Vendor",
+            "invoice_date": "2026-10-01",
+            "amount": 95000.0,
+            "category": "Office Supplies",
+            "employee_id": "EMP-501",
+            "description": "Massive supply claim exceeding limit"
+        }
+    ]
+    process_and_store_invoices(test_batch, amount_limit=5000.0)
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM invoices WHERE invoice_id = 'TEST-AUTO-PASS-01'")
+    clean_row = dict(cursor.fetchone())
+    assert clean_row["status"] == "PASS"
+    assert clean_row["decision_status"] == "AUTO_PASSED"
+
+    cursor.execute("SELECT * FROM invoices WHERE invoice_id = 'TEST-EXC-PILE-01'")
+    exc_row = dict(cursor.fetchone())
+    assert exc_row["status"] in ("FAIL", "REVIEW")
+    assert exc_row["decision_status"] == "IN_EXCEPTION_PILE"
+    conn.close()
+
+def test_explainable_flag_matched_record_citation():
+    from services.duplicate_detector import detect_duplicates
+    invoices = [
+        {"invoice_id": "INV-ORIG-1", "vendor_name": "Staples Inc", "amount": 450.0, "invoice_date": "2026-10-01"},
+        {"invoice_id": "INV-DUP-1", "vendor_name": "Staples Inc", "amount": 450.0, "invoice_date": "2026-10-01"}
+    ]
+    violations = detect_duplicates(invoices)
+    assert len(violations) >= 1
+    dup_violation = violations[0]
+    assert "citation" in dup_violation
+    assert "INV-ORIG-1" in dup_violation["citation"]
+    assert dup_violation.get("matched_invoice_id") == "INV-ORIG-1"
+
+def test_ap_exception_short_report():
+    from fastapi.testclient import TestClient
+    from backend.main import app
+    client = TestClient(app)
+
+    res = client.get("/ap-exception-report")
+    assert res.status_code == 200
+    report = res.json()
+    assert report["title"] == "Accounts-Payable Exception Pile Summary Report"
+    assert "summary" in report
+    assert "auto_passed_clean_invoices" in report["summary"]
+    assert "exception_pile_count" in report["summary"]
+    assert "exception_pile_items" in report
+
 
 
 

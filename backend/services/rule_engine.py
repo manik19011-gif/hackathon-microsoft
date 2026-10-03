@@ -72,6 +72,7 @@ def evaluate_invoice_rules(invoice: Dict[str, Any], amount_limit: float = DEFAUL
             "status": "FAIL",
             "reason": f"Missing required field(s): {', '.join(missing)}",
             "evidence": f"Provided record lacks values for: {missing}",
+            "citation": f"AP Policy Reference: Mandatory field(s) missing from invoice ({', '.join(missing)})",
             "severity": "HIGH"
         })
         
@@ -91,6 +92,7 @@ def evaluate_invoice_rules(invoice: Dict[str, Any], amount_limit: float = DEFAUL
                         "status": "FAIL",
                         "reason": f"Invoice amount must be positive. Found ${val_amount:.2f} ({detected_curr})",
                         "evidence": f"Amount = {val_amount} ({detected_curr})",
+                        "citation": f"AP Policy Reference: Non-positive invoice amount (${val_amount:.2f})",
                         "severity": "HIGH"
                     })
             else:
@@ -100,6 +102,7 @@ def evaluate_invoice_rules(invoice: Dict[str, Any], amount_limit: float = DEFAUL
                     "status": "FAIL",
                     "reason": "Invoice amount is non-numeric or unparseable",
                     "evidence": f"Amount raw value: {amount}",
+                    "citation": f"AP Policy Reference: Unparseable amount format: '{amount}'",
                     "severity": "HIGH"
                 })
         except Exception:
@@ -109,6 +112,7 @@ def evaluate_invoice_rules(invoice: Dict[str, Any], amount_limit: float = DEFAUL
                 "status": "FAIL",
                 "reason": "Invoice amount is non-numeric or unparseable",
                 "evidence": f"Amount raw value: {amount}",
+                "citation": f"AP Policy Reference: Unparseable amount format: '{amount}'",
                 "severity": "HIGH"
             })
             
@@ -121,6 +125,7 @@ def evaluate_invoice_rules(invoice: Dict[str, Any], amount_limit: float = DEFAUL
                 "status": "REVIEW",
                 "reason": f"Invoice amount (${val_amount:,.2f}) exceeds global limit threshold of (${amount_limit:,.2f})",
                 "evidence": f"Invoice amount ${val_amount:,.2f} > Policy Limit ${amount_limit:,.2f}",
+                "citation": f"AP Policy Reference: Global approval threshold ${amount_limit:,.2f} exceeded by ${(val_amount - amount_limit):,.2f}",
                 "severity": "MEDIUM"
             })
 
@@ -136,6 +141,7 @@ def evaluate_invoice_rules(invoice: Dict[str, Any], amount_limit: float = DEFAUL
                 "status": "REVIEW",
                 "reason": f"Invoice amount (${val_amount:,.2f}) exceeds policy limit for category '{invoice.get('category')}' (${cat_limit:,.2f})",
                 "evidence": f"Category: '{invoice.get('category')}', Amount: ${val_amount:,.2f}, Category Limit: ${cat_limit:,.2f}",
+                "citation": f"AP Policy Reference: Category '{invoice.get('category')}' ceiling ${cat_limit:,.2f} exceeded by ${(val_amount - cat_limit):,.2f}",
                 "severity": "MEDIUM"
             })
 
@@ -150,6 +156,7 @@ def evaluate_invoice_rules(invoice: Dict[str, Any], amount_limit: float = DEFAUL
                 "status": "REVIEW",
                 "reason": f"Unrecognized or invalid date format: '{inv_date}'",
                 "evidence": f"Invoice Date string: '{inv_date}'",
+                "citation": f"AP Policy Reference: Invalid date syntax '{inv_date}'",
                 "severity": "LOW"
             })
         elif dt_obj:
@@ -162,6 +169,7 @@ def evaluate_invoice_rules(invoice: Dict[str, Any], amount_limit: float = DEFAUL
                     "status": "REVIEW",
                     "reason": f"Invoice date '{inv_date}' is set in the future relative to system time",
                     "evidence": f"Invoice Date: {inv_date} > System Date: {today}",
+                    "citation": f"AP Policy Reference: Forward-dated claim ({inv_date})",
                     "severity": "LOW"
                 })
             # Weekend check
@@ -172,6 +180,7 @@ def evaluate_invoice_rules(invoice: Dict[str, Any], amount_limit: float = DEFAUL
                     "status": "REVIEW",
                     "reason": f"Invoice date '{inv_date}' falls on a weekend ({dt_obj.strftime('%A')})",
                     "evidence": f"Date: {inv_date} ({dt_obj.strftime('%A')})",
+                    "citation": f"AP Policy Reference: Weekend expenditure ({dt_obj.strftime('%A')}) requiring justification",
                     "severity": "LOW"
                 })
 
@@ -187,6 +196,7 @@ def evaluate_invoice_rules(invoice: Dict[str, Any], amount_limit: float = DEFAUL
                 "status": "FAIL",
                 "reason": f"Vendor '{vendor_name}' matches watched high-risk entity '{match_info['entity_name']}' ({sim_score}% similarity). Reason: {match_info['reason']}",
                 "evidence": f"Watchlist Category: {match_info['category']}, Risk Level: {match_info['risk_level']}, Similarity: {sim_score}%",
+                "citation": f"Sanctions List Citation: Matched restricted entity '{match_info['entity_name']}' ({match_info['category']}, {match_info['risk_level']}) at {sim_score}% token similarity",
                 "severity": "HIGH"
             })
 
@@ -200,6 +210,7 @@ def evaluate_invoice_rules(invoice: Dict[str, Any], amount_limit: float = DEFAUL
                 "status": "REVIEW",
                 "reason": f"Invoice amount (${val_amount:,.2f}) in category '{invoice.get('category')}' is an exact round number without itemized cents, a common indicator of estimated or fabricated claims.",
                 "evidence": f"Amount: ${val_amount:,.2f} (multiple of $500), Category: '{invoice.get('category')}'",
+                "citation": f"Forensic Accounting Citation: Unitemized round multiple of $500 (${val_amount:,.2f}) in discretionary category '{invoice.get('category')}'",
                 "severity": "MEDIUM"
             })
         

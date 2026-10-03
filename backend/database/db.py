@@ -44,11 +44,18 @@ def init_db():
         status TEXT,
         reason TEXT,
         evidence TEXT,
+        citation TEXT,
         severity TEXT DEFAULT 'MEDIUM',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(invoice_id) REFERENCES invoices(invoice_id)
     )
     """)
+
+    # Ensure citation column exists if table was created previously
+    cursor.execute("PRAGMA table_info(exceptions)")
+    exc_cols = [r["name"] for r in cursor.fetchall()]
+    if "citation" not in exc_cols:
+        cursor.execute("ALTER TABLE exceptions ADD COLUMN citation TEXT")
     
     # Audit log table
     cursor.execute("""

@@ -119,7 +119,7 @@
           <div>
             <div class="flex items-center space-x-2">
               <span class="text-lg font-extrabold tracking-tight text-white">InvoiceCompliance<span class="text-indigo-400">.AI</span></span>
-              <span class="hidden sm:inline-flex text-[10px] font-extrabold uppercase tracking-wider bg-indigo-500/10 text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-500/30">Microsoft Hackathon</span>
+              <span class="hidden sm:inline-flex text-[10px] font-extrabold uppercase tracking-wider bg-indigo-500/15 text-indigo-300 px-2.5 py-0.5 rounded-full border border-indigo-500/30">Challenge #16: The AP Exception Pile</span>
             </div>
             <p class="text-[11px] text-slate-400 flex items-center space-x-1.5 mt-0.5">
               <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -203,8 +203,8 @@
           <span class="text-slate-700 px-1">|</span>
 
           <button onclick="switchMainView('studioView')" id="navStudio" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center space-x-1.5">
-            <i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i>
-            <span>Audit Studio</span>
+            <i data-lucide="inbox" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span>The AP Exception Pile (Triage)</span>
           </button>
           
           <button onclick="switchMainView('checkerView')" id="navChecker" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center space-x-1.5">
@@ -267,8 +267,8 @@
             <span>Overview & Pitch</span>
           </button>
           <button onclick="switchMainView('studioView'); closeMobileDrawer()" class="w-full text-left px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-900 hover:text-white flex items-center space-x-3">
-            <i data-lucide="layout-dashboard" class="w-4 h-4 text-indigo-400"></i>
-            <span>Audit Studio</span>
+            <i data-lucide="inbox" class="w-4 h-4 text-amber-400"></i>
+            <span>The AP Exception Pile (Triage Queue)</span>
           </button>
           <button onclick="switchMainView('checkerView'); closeMobileDrawer()" class="w-full text-left px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-900 hover:text-white flex items-center space-x-3">
             <i data-lucide="scan" class="w-4 h-4 text-indigo-400"></i>
@@ -529,6 +529,55 @@
   <!-- VIEW 2: LIVE AUDIT STUDIO (DASHBOARD)      -->
   <!-- ========================================== -->
   <section id="studioView" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+    <!-- ========================================== -->
+    <!-- AP TRIAGE PIPELINE: AUTO-PASS VS EXCEPTION -->
+    <!-- ========================================== -->
+    <div class="glass-card p-5 rounded-2xl border border-indigo-500/40 bg-gradient-to-r from-slate-900/95 via-slate-900 to-indigo-950/40 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+      <div class="flex items-center space-x-3.5">
+        <div class="p-3 bg-gradient-to-tr from-indigo-600 to-purple-600 text-white rounded-xl shadow-lg shadow-indigo-600/30">
+          <i data-lucide="layers" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h2 class="text-sm font-extrabold text-white">Enterprise AP Exception Triage Engine</h2>
+            <span class="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-500/30 flex items-center space-x-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+              <span>Auto-Pass Active</span>
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 mt-1 max-w-xl">
+            Clean invoices with 0 violations are <strong>auto-passed</strong> for payment. Only low-confidence & policy exceptions are routed to human review in <strong>The AP Exception Pile</strong>.
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-3">
+        <!-- Clean Auto-Passed Counter -->
+        <div class="bg-slate-950/80 px-4 py-2 rounded-xl border border-emerald-500/30 text-center shadow-inner">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Auto-Passed (Clean)</span>
+          <div class="flex items-center space-x-1.5 justify-center mt-0.5">
+            <span id="triageAutoPassed" class="text-xl font-black text-emerald-400">--</span>
+            <span id="triageAutoPassPct" class="text-xs text-emerald-500 font-bold">(--%)</span>
+          </div>
+        </div>
+
+        <!-- Exception Pile Counter -->
+        <div class="bg-slate-950/80 px-4 py-2 rounded-xl border border-amber-500/30 text-center shadow-inner">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">The Exception Pile</span>
+          <div class="flex items-center space-x-1.5 justify-center mt-0.5">
+            <span id="triageExceptionPile" class="text-xl font-black text-amber-400">--</span>
+            <span class="text-[10px] text-amber-500 font-bold uppercase">Human Review</span>
+          </div>
+        </div>
+
+        <!-- Short Report Trigger Button -->
+        <button onclick="openShortReportModal()" class="flex items-center space-x-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-600/30 transition transform hover:-translate-y-0.5">
+          <i data-lucide="file-text" class="w-4 h-4"></i>
+          <span>AP Short Report</span>
+        </button>
+      </div>
+    </div>
 
     <!-- KPI Summary Cards with Compliance Gauge -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
@@ -1767,6 +1816,77 @@
   </div>
 
   <!-- ========================================== -->
+  <!-- MODAL: AP EXCEPTION SHORT REPORT           -->
+  <!-- ========================================== -->
+  <div id="shortReportModal" class="fixed inset-0 bg-black/80 backdrop-blur-md hidden z-50 flex items-center justify-center p-4">
+    <div class="glass-card bg-slate-900 border border-slate-700 rounded-2xl max-w-3xl w-full p-6 space-y-5 shadow-2xl max-h-[90vh] overflow-y-auto" id="shortReportPrintArea">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div>
+          <span class="text-[10px] font-extrabold uppercase tracking-wider bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30">AP Exception Short Report</span>
+          <h2 class="text-lg font-bold text-white mt-1">Accounts-Payable Exception Pile & Auto-Pass Brief</h2>
+          <p class="text-xs text-slate-400" id="srTimestamp">Generated: -- • Challenge #16 Edition</p>
+        </div>
+        <div class="flex items-center space-x-2 no-print">
+          <button onclick="window.print()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center space-x-1 shadow">
+            <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+            <span>Print Report</span>
+          </button>
+          <button onclick="closeShortReportModal()" class="text-slate-400 hover:text-white p-1">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Key Metrics -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+          <span class="text-slate-400">Total Invoices:</span>
+          <h4 id="srTotal" class="text-base font-bold text-white mt-0.5">--</h4>
+        </div>
+        <div class="bg-slate-950 p-3 rounded-xl border border-emerald-500/30">
+          <span class="text-slate-400">Auto-Passed (Clean):</span>
+          <h4 id="srAutoPassed" class="text-base font-bold text-emerald-400 mt-0.5">--</h4>
+        </div>
+        <div class="bg-slate-950 p-3 rounded-xl border border-amber-500/30">
+          <span class="text-slate-400">Exception Pile:</span>
+          <h4 id="srExceptions" class="text-base font-bold text-amber-400 mt-0.5">--</h4>
+        </div>
+        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+          <span class="text-slate-400">Auto-Pass Rate:</span>
+          <h4 id="srAutoRate" class="text-base font-bold text-indigo-400 mt-0.5">--%</h4>
+        </div>
+      </div>
+
+      <!-- Problem Statement Enterprise Controls Checklist -->
+      <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 text-xs space-y-1.5">
+        <h4 class="text-[11px] font-bold text-slate-300 uppercase tracking-wider">Enterprise Compliance Controls Verified:</h4>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-slate-300 text-[11px]">
+          <div class="flex items-center space-x-1.5 text-emerald-400"><i data-lucide="check" class="w-3.5 h-3.5"></i><span>Clean rows auto-passed without human bottleneck</span></div>
+          <div class="flex items-center space-x-1.5 text-emerald-400"><i data-lucide="check" class="w-3.5 h-3.5"></i><span>Only low-confidence exceptions routed to human</span></div>
+          <div class="flex items-center space-x-1.5 text-emerald-400"><i data-lucide="check" class="w-3.5 h-3.5"></i><span>Every flag explainable with cited matched record</span></div>
+          <div class="flex items-center space-x-1.5 text-emerald-400"><i data-lucide="check" class="w-3.5 h-3.5"></i><span>Immutable SOX audit trail of every decision</span></div>
+        </div>
+      </div>
+
+      <!-- Itemized Exception Pile List -->
+      <div class="space-y-2">
+        <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center space-x-2">
+          <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400"></i>
+          <span>Exception Pile Flagged Items Requiring Human Decision:</span>
+        </h4>
+        <div id="srExceptionList" class="space-y-2 max-h-56 overflow-y-auto pr-1 text-xs">
+          <p class="text-slate-500">Loading exception items...</p>
+        </div>
+      </div>
+
+      <div class="flex justify-between items-center pt-3 border-t border-slate-800 text-[11px] text-slate-500">
+        <span>InvoiceCompliance.AI • Accounts-Payable Exception Assistant</span>
+        <button onclick="closeShortReportModal()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
   <!-- GLOBAL FOOTER                              -->
   <!-- ========================================== -->
   <footer class="mt-auto border-t border-slate-800/80 bg-slate-950/80 py-10 no-print">
@@ -1907,6 +2027,17 @@
         document.getElementById('statAmount').innerText = `$${stats.total_amount.toLocaleString()}`;
         document.getElementById('statAvgRisk').innerText = `${stats.avg_risk_score} / 100`;
 
+        // Update Problem Statement Triage Counters (Auto-Pass vs Exception Pile)
+        const tap = document.getElementById('triageAutoPassed');
+        const tapPct = document.getElementById('triageAutoPassPct');
+        const tep = document.getElementById('triageExceptionPile');
+        if (tap && tep && tapPct) {
+          tap.innerText = stats.auto_passed_count ?? stats.valid_records;
+          tep.innerText = stats.exception_pile_count ?? stats.exceptions_records;
+          const rate = stats.auto_pass_rate_pct ?? (stats.total_records > 0 ? Math.round((stats.valid_records / stats.total_records) * 100) : 100);
+          tapPct.innerText = `(${rate}%)`;
+        }
+
         // Update Real-Time Compliance Health Gauge (SVG Radial)
         const cleanRate = stats.total_records > 0 ? Math.round((stats.valid_records / stats.total_records) * 100) : 100;
         const gaugeVal = document.getElementById('complianceGaugeVal');
@@ -1960,7 +2091,10 @@
                   ${e.status}
                 </span>
               </td>
-              <td class="py-3 px-4 text-slate-400 max-w-xs truncate">${e.reason}</td>
+              <td class="py-3 px-4 text-slate-400 max-w-xs">
+                <div>${e.reason}</div>
+                ${e.citation ? `<div class="mt-1.5 text-[10px] font-mono text-indigo-300 bg-indigo-950/70 px-2 py-0.5 rounded border border-indigo-500/30 flex items-center space-x-1 max-w-xs truncate" title="${e.citation}"><i data-lucide="link-2" class="w-3 h-3 text-indigo-400 flex-shrink-0"></i><span>${e.citation}</span></div>` : ''}
+              </td>
               <td class="py-3 px-4 text-indigo-300 bg-indigo-500/5 rounded p-2 border border-indigo-500/10 text-[11px] leading-relaxed">${e.ai_explanation}</td>
               <td class="py-3 px-4">
                 <button onclick="event.stopPropagation(); openModal('${e.invoice_id}')" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold underline">Investigate</button>
@@ -2614,6 +2748,7 @@ Description: Management strategic advisory retainer`;
               <span class="text-[10px] font-bold ${e.severity === 'HIGH' ? 'text-red-400' : 'text-amber-400'}">${e.severity}</span>
             </div>
             <p class="text-slate-400">${e.reason}</p>
+            ${e.citation ? `<div class="p-2 bg-indigo-950/70 border border-indigo-500/30 rounded text-[11px] font-mono text-indigo-300 flex items-center space-x-1.5"><i data-lucide="link-2" class="w-3.5 h-3.5 text-indigo-400 flex-shrink-0"></i><span><strong>Cited Record:</strong> ${e.citation}</span></div>` : ''}
             <p class="text-indigo-300 text-[11px] bg-indigo-500/10 p-2 rounded mt-1">${e.ai_explanation}</p>
           </div>
         `).join('');
@@ -2654,6 +2789,7 @@ Description: Management strategic advisory retainer`;
 
     async function runJudgeStep(stepNum) {
       closeJudgeModal();
+        closeShortReportModal();
       if (stepNum === 1) {
         await loadScenario('procurement-fraud');
         showToast('Step 1 executed: Procurement Fraud Scenario loaded with structuring & shell entities.');
@@ -2856,6 +2992,43 @@ Description: Management strategic advisory retainer`;
       await loadData();
     }
 
+
+    // --- AP Exception Short Report Functions ---
+    async function openShortReportModal() {
+      const modal = document.getElementById('shortReportModal');
+      modal.classList.remove('hidden');
+
+      const rep = await fetchAPI('/ap-exception-report');
+      if (rep && rep.summary) {
+        document.getElementById('srTimestamp').innerText = `Generated: ${new Date(rep.generated_at).toLocaleString()} • System: ${rep.system}`;
+        document.getElementById('srTotal').innerText = `${rep.summary.total_invoices_audited} ($${rep.summary.total_spend_audited.toLocaleString()})`;
+        document.getElementById('srAutoPassed').innerText = `${rep.summary.auto_passed_clean_invoices} ($${rep.summary.auto_passed_spend.toLocaleString()})`;
+        document.getElementById('srExceptions').innerText = `${rep.summary.exception_pile_count} ($${rep.summary.exception_pile_at_risk_spend.toLocaleString()})`;
+        document.getElementById('srAutoRate').innerText = `${rep.summary.auto_pass_rate_pct}%`;
+
+        const listDiv = document.getElementById('srExceptionList');
+        if (!rep.exception_pile_items || rep.exception_pile_items.length === 0) {
+          listDiv.innerHTML = '<p class="text-emerald-400 font-semibold p-3 bg-emerald-500/10 rounded-lg">Zero exceptions in queue! All invoices auto-passed compliance verification.</p>';
+        } else {
+          listDiv.innerHTML = rep.exception_pile_items.map(item => `
+            <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 space-y-1">
+              <div class="flex justify-between items-center font-bold">
+                <span class="text-white">${item.invoice_id} — ${item.vendor_name || 'Vendor'} ($${Number(item.amount || 0).toLocaleString()})</span>
+                <span class="text-[10px] px-2 py-0.5 rounded ${item.severity === 'HIGH' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'}">${item.rule}</span>
+              </div>
+              <p class="text-slate-400 text-[11px]">${item.reason}</p>
+              ${item.citation ? `<div class="text-[10px] font-mono text-indigo-300 bg-indigo-950/60 p-1.5 rounded border border-indigo-500/20 flex items-center space-x-1"><i data-lucide="link-2" class="w-3 h-3 text-indigo-400 flex-shrink-0"></i><span><strong>Citation:</strong> ${item.citation}</span></div>` : ''}
+            </div>
+          `).join('');
+        }
+        lucide.createIcons();
+      }
+    }
+
+    function closeShortReportModal() {
+      document.getElementById('shortReportModal').classList.add('hidden');
+    }
+
     // Keyboard Shortcuts (Ctrl+K, Esc, Alt+1-3, Shift+?)
     document.addEventListener('keydown', (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -2866,6 +3039,7 @@ Description: Management strategic advisory retainer`;
         closePolicyModal();
         closeReportModal();
         closeJudgeModal();
+        closeShortReportModal();
         closeCommandPalette();
         closeShortcutsModal();
         closeMobileDrawer();
